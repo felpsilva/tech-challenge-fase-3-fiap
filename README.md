@@ -240,3 +240,8 @@ Para reaplicar o bootstrap: `docker compose up --build`.
 - Uploads vão para o banco, não para o disco: o container do backend não tem
   volume e a imagem é recriada a cada deploy, então qualquer arquivo salvo no
   filesystem se perderia.
+- O hash de senha nunca sai do banco: a coluna `password` da entidade `User`
+  tem `select: false`, então nenhuma consulta o traz por engano — nem quando o
+  usuário é carregado como relação (o autor em `GET /post`). O único ponto que
+  pede a coluna explicitamente é o `findByUsername`, usado pelo `signin` para
+  comparar o hash com o bcrypt.

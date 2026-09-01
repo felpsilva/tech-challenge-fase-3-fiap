@@ -18,10 +18,14 @@ export class User implements IUser {
     })
     username: string
 
+    // select: false mantem o hash fora de qualquer find(), inclusive quando a
+    // entidade e carregada como relacao (ex.: o autor em GET /post). Somente o
+    // findByUsername, usado pelo signin, pede a coluna explicitamente.
     @Column({
         name: 'password',
         type: 'varchar',
         length: 255,
+        select: false,
     })
     password: string
 
