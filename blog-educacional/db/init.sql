@@ -28,6 +28,20 @@ CREATE TABLE IF NOT EXISTS posts (
     updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Thumbnail do post armazenada como arquivo binário.
+-- Fica em tabela separada (1:1) de propósito: assim os SELECTs de `posts`
+-- nunca carregam o binário, e o custo de egress do Neon não explode nas
+-- listagens. A PK é o próprio post_id, o que garante uma imagem por post.
+CREATE TABLE IF NOT EXISTS post_images (
+    post_id     INTEGER PRIMARY KEY REFERENCES posts(id) ON DELETE CASCADE,
+    filename    VARCHAR(255) NOT NULL,
+    mime_type   VARCHAR(100) NOT NULL,
+    size_bytes  INTEGER NOT NULL,
+    data        BYTEA NOT NULL,
+    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Tabela de junção da relação ManyToMany entre posts e categorias.
 CREATE TABLE IF NOT EXISTS post_categories (
     post_id     INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,

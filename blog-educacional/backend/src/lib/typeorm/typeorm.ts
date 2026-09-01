@@ -3,6 +3,7 @@ import { env } from '@/env'
 import { User } from '@/entities/user.entity'
 import { Post } from '@/entities/post.entity'
 import { Category } from '@/entities/category.entity'
+import { PostImage } from '@/entities/post-image.entity'
 
 const isNeonDatabase = env.DATABASE_URL?.includes('neon.tech')
 
@@ -18,7 +19,7 @@ export const appDataSource = new DataSource({
             database: env.DB_NAME,
         }),
     ...(isNeonDatabase ? { ssl: { rejectUnauthorized: false } } : {}),
-    entities: [User, Post, Category],
+    entities: [User, Post, Category, PostImage],
     logging: env.NODE_ENV === 'development',
 })
 

@@ -24,6 +24,9 @@ export const errorHandlerMap: ErrorHandlerMap = {
     },
     InvalidCredentialsError: (error, _, reply) => {
         return reply.status(401).send({ message: error.message })
+    },
+    InvalidImageFileError: (error, _, reply) => {
+        return reply.status(400).send({ message: error.message })
     }
 };
 
