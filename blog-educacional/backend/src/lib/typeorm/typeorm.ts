@@ -23,10 +23,25 @@ export const appDataSource = new DataSource({
     logging: env.NODE_ENV === 'development',
 })
 
-appDataSource.initialize()
-    .then(() => {
+/**
+ * A promise da inicializacao e exportada de proposito: o `server.ts` espera
+ * por ela antes de abrir a porta.
+ *
+ * Enquanto isto era so efeito colateral de import, o Fastify comecava a
+ * aceitar requisicao antes das entidades estarem registradas, e toda chamada
+ * que caisse nessa janela — a primeira apos cada deploy, tipicamente —
+ * falhava com `EntityMetadataNotFoundError`.
+ */
+export const databaseReady = appDataSource.initialize()
+    .then((dataSource) => {
         console.log('Base de dados com typeorm inicializada com sucesso!')
+        return dataSource
     })
-    .catch((err) => {
-        console.error('Erro ao inicializar a base de dados com typeorm', err)
-    })
+
+// Quem decide o que fazer com a falha e o `server.ts`, que espera por
+// `databaseReady`. Este handler existe so para o caso de ninguem esperar —
+// em ambiente sem banco alcancavel, a rejeicao solta derrubaria o processo
+// como unhandled rejection antes de alguem poder tratar o erro.
+databaseReady.catch((err) => {
+    console.error('Erro ao inicializar a base de dados com typeorm', err)
+})
