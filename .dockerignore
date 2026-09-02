@@ -1,0 +1,15 @@
+# Contexto de build compartilhado: o backend passou a ser construido a partir
+# da RAIZ do repositorio para que o `.env` compartilhado entre na imagem. Sem
+# estas regras, o contexto enviado ao daemon levaria junto node_modules e
+# artefatos de build dos dois pacotes.
+#
+# O `.env` NAO entra aqui de proposito: e ele que o backend le em producao.
+**/node_modules
+**/dist
+**/coverage
+**/.next
+**/.swc
+**/*.tsbuildinfo
+**/*.log
+.git
+.github

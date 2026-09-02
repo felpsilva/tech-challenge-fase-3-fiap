@@ -108,7 +108,11 @@ jobs:
       - name: Build e Push da imagem
         uses: docker/build-push-action@v6
         with:
-          context: blog-educacional/backend
+          # Contexto na raiz: o Dockerfile do backend copia o `.env`
+          # compartilhado para dentro da imagem, e ele vive aqui. Com o
+          # contexto em `blog-educacional/backend` o container sobe sem
+          # DB_HOST/JWT_SECRET e morre na validacao do env.
+          context: .
           file: blog-educacional/backend/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}

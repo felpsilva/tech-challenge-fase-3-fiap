@@ -13,7 +13,12 @@ services:
       sh -c "psql \"$$DATABASE_URL\" -v ON_ERROR_STOP=1 -f /init.sql"
 
   backend:
-    build: ./backend
+    build:
+      # Contexto na raiz do repositorio, um nivel acima deste arquivo: e o que
+      # permite ao Dockerfile copiar o `.env` compartilhado para dentro da
+      # imagem. Com o contexto em `./backend` o arquivo fica fora do alcance.
+      context: ..
+      dockerfile: blog-educacional/backend/Dockerfile
     container_name: blog-backend
     restart: unless-stopped
     env_file:

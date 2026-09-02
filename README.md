@@ -61,13 +61,15 @@ produção.
 
 Duas ressalvas:
 
-- **A imagem Docker não enxerga o `.env` da raiz.** O contexto de build é
-  `./backend` ou `./frontend`, um nível abaixo dele. Em container a
-  configuração chega pelo `env_file`/`environment` do compose (que aponta para
-  `../.env`) e pelo `ARG NEXT_PUBLIC_API_URL`.
-- **A saída `standalone` do Next não carrega o `next.config.ts` em runtime.**
-  Em produção containerizada o `API_URL` vem do ambiente, não do arquivo.
-
+- **A imagem do backend é construída a partir da raiz do repositório**, não de
+  `./backend`, justamente para conseguir copiar o `.env` compartilhado para
+  dentro dela (`COPY .env* ./` no Dockerfile). É o que permite ao serviço no
+  Render subir sem nenhuma variável configurada no painel. Continua sendo
+  fallback: variável definida no painel vence o arquivo embutido.
+- **A imagem do frontend não recebe o `.env` da raiz.** O contexto dela é
+  `./frontend`, e a saída `standalone` do Next nem carregaria o
+  `next.config.ts` em runtime. Ali a configuração chega pelo
+  `ARG NEXT_PUBLIC_API_URL` (build) e pelo `environment` do compose (runtime).
 O `.env` é versionado por decisão do projeto (trabalho acadêmico, avaliador
 precisa subir sem configurar nada). Em um projeto real as credenciais do banco
 e o `JWT_SECRET` não deveriam estar aqui.
