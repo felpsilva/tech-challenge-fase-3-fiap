@@ -9,10 +9,11 @@ on:
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/blog-educacional-backend
+  FRONTEND_IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/blog-educacional-frontend
 
 jobs:
   test:
-    name: Testes
+    name: Testes do backend
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,10 +35,53 @@ jobs:
       - name: Testes
         run: npm test
 
-  build-and-push:
-    name: Build & Push (Docker Hub)
+  test-frontend:
+    name: Testes do frontend
     runs-on: ubuntu-latest
-    needs: test
+    defaults:
+      run:
+        working-directory: blog-educacional/frontend
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configura Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: blog-educacional/frontend/package-lock.json
+
+      - name: Instala dependências
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Verificação de tipos
+        run: npm run type-check
+
+      - name: Testes
+        run: npm test
+
+      # Sem `NEXT_PUBLIC_API_URL` no ambiente de proposito: o build precisa
+      # pegar a URL do `.env.production` da raiz. E o unico ponto do CI que
+      # exercita a cadeia raiz -> next.config -> bundle.
+      - name: Build
+        run: npm run build
+
+      - name: Verifica a URL da API embutida no bundle
+        run: |
+          if ! grep -rq 'blog-educacional-backend-1.onrender.com' .next/static; then
+            echo '::error::A URL da API de producao nao foi embutida no bundle.'
+            echo 'Confira NEXT_PUBLIC_API_URL em .env.production na raiz.'
+            exit 1
+          fi
+
+  build-and-push:
+    name: Build & Push do backend (Docker Hub)
+    runs-on: ubuntu-latest
+    needs: [test, test-frontend]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout do código
@@ -67,6 +111,54 @@ jobs:
           context: blog-educacional/backend
           file: blog-educacional/backend/Dockerfile
           push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-and-push-frontend:
+    name: Build & Push do frontend (Docker Hub)
+    runs-on: ubuntu-latest
+    needs: [test, test-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configura Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extrai metadados (tags e labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.FRONTEND_IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build e Push da imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: blog-educacional/frontend
+          file: blog-educacional/frontend/Dockerfile
+          push: true
+          # NEXT_PUBLIC_* e inlinado no bundle do navegador em tempo de build.
+          # O contexto do build e `blog-educacional/frontend`, entao o `.env`
+          # da raiz nao chega ate aqui — a URL precisa vir como arg. Pode ser
+          # sobrescrita pela variavel de repositorio NEXT_PUBLIC_API_URL (em
+          # vars, nao em secrets: e URL publica, e um secret mascarado em log
+          # tornaria uma configuracao errada indepuravel).
+          # O `||` cobre a variavel de repositorio ausente: sem ele a imagem
+          # sairia com a URL vazia e falharia em producao com erro opaco.
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://blog-educacional-backend-1.onrender.com' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

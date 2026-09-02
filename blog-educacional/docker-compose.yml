@@ -4,7 +4,9 @@ services:
     container_name: blog-neon-init
     restart: "no"
     env_file:
-      - ./backend/.env
+      # Configuracao compartilhada na raiz do repositorio, um nivel acima
+      # deste arquivo. O `environment` abaixo tem precedencia sobre ela.
+      - ../.env
     volumes:
       - ./db/init.sql:/init.sql:ro
     command: >
@@ -15,12 +17,36 @@ services:
     container_name: blog-backend
     restart: unless-stopped
     env_file:
-      - ./backend/.env
+      # Configuracao compartilhada na raiz do repositorio, um nivel acima
+      # deste arquivo. O `environment` abaixo tem precedencia sobre ela.
+      - ../.env
     environment:
       NODE_ENV: development
       PORT: 3001
+      # Origem do frontend no compose. Sem isto o browser e barrado no CORS.
+      CORS_ORIGIN: http://localhost:3000
     ports:
       - "3001:3001"
     depends_on:
       neon-init:
         condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # URL que o NAVEGADOR usa: e a porta publicada no host, e fica
+        # embutida no bundle em tempo de build — por isso vem como arg.
+        # Apontar para http://backend:3001 aqui faz o SSR funcionar e toda
+        # interacao do cliente falhar com erro de DNS.
+        NEXT_PUBLIC_API_URL: http://localhost:3001
+    container_name: blog-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      API_URL: http://backend:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend

@@ -4,8 +4,15 @@
     "scripts": {
         "start": "npm --prefix blog-educacional/backend start",
         "start:dev": "npm --prefix blog-educacional/backend run start:dev",
-        "test": "npm --prefix blog-educacional/backend test",
-        "lint": "npm --prefix blog-educacional/backend run lint",
+        "dev:front": "npm --prefix blog-educacional/frontend run dev",
+        "build:front": "npm --prefix blog-educacional/frontend run build",
+        "start:front": "npm --prefix blog-educacional/frontend start",
+        "test": "npm run test:back && npm run test:front",
+        "test:back": "npm --prefix blog-educacional/backend test",
+        "test:front": "npm --prefix blog-educacional/frontend test",
+        "lint": "npm run lint:back && npm run lint:front",
+        "lint:back": "npm --prefix blog-educacional/backend run lint",
+        "lint:front": "npm --prefix blog-educacional/frontend run lint",
         "lint:fix": "npm --prefix blog-educacional/backend run lint:fix"
     }
 }
