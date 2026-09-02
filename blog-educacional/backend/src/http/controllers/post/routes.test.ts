@@ -79,10 +79,13 @@ describe('POST /post', () => {
         mockMakeDeletePostUseCase = mockedDeleteModule.makeDeletePostUseCase as jest.Mock
 
         const testApp = await createAuthenticatedTestApp(async (appInstance) => {
+            // Espelha `post/routes.ts`: leitura publica, escrita protegida, e
+            // `/post/search` antes de `/post/:id` para o roteador nao mandar
+            // "search" para o handler de id.
             appInstance.post('/post', { preHandler: authorizeRoles(['admin', 'professor']) }, create)
-            appInstance.get('/post', { preHandler: authorizeRoles(['admin', 'professor', 'aluno']) }, fetch)
-            appInstance.get('/post/:id', { preHandler: authorizeRoles(['admin', 'professor', 'aluno']) }, get)
-            appInstance.get('/post/search', { preHandler: authorizeRoles(['admin', 'professor']) }, search)
+            appInstance.get('/post', fetch)
+            appInstance.get('/post/search', search)
+            appInstance.get('/post/:id', get)
             appInstance.put('/post/:id', { preHandler: authorizeRoles(['admin', 'professor']) }, update)
             appInstance.delete('/post/:id', { preHandler: authorizeRoles(['admin', 'professor']) }, remove)
         })
@@ -284,5 +287,169 @@ describe('POST /post', () => {
         expect(response.payload).toBe('')
         expect(mockMakeDeletePostUseCase).toHaveBeenCalledTimes(1)
         expect(mockDeleteHandler).toHaveBeenCalledWith(1)
+    })
+    // ---------------------------------------------------------------------
+    // Leitura publica: o blog precisa abrir sem login. O que muda para quem
+    // nao tem token e a visibilidade do rascunho, nao o acesso a rota.
+    // ---------------------------------------------------------------------
+
+    const publishedPost = {
+        id: 1,
+        user_id: 7,
+        title: 'Post publicado',
+        slug: 'post-publicado',
+        content: 'Conteúdo publicado',
+        image_url: null,
+        status: 'published',
+        categories: [],
+    }
+
+    const draftPost = {
+        id: 2,
+        user_id: 7,
+        title: 'Post em rascunho',
+        slug: 'post-em-rascunho',
+        content: 'Conteúdo ainda não publicado',
+        image_url: null,
+        status: 'draft',
+        categories: [],
+    }
+
+    it('lists posts without an Authorization header', async () => {
+        mockFetchHandler.mockResolvedValueOnce([publishedPost])
+
+        const response = await app.inject({ method: 'GET', url: '/post' })
+
+        expect(response.statusCode).toBe(200)
+        expect(JSON.parse(response.payload)).toEqual([publishedPost])
+    })
+
+    it('hides draft posts from an anonymous request', async () => {
+        mockFetchHandler.mockResolvedValueOnce([publishedPost, draftPost])
+
+        const response = await app.inject({ method: 'GET', url: '/post' })
+
+        expect(response.statusCode).toBe(200)
+        expect(JSON.parse(response.payload)).toEqual([publishedPost])
+    })
+
+    it('returns draft posts to an authenticated request', async () => {
+        mockFetchHandler.mockResolvedValueOnce([publishedPost, draftPost])
+
+        const response = await app.inject({ method: 'GET', url: '/post', headers })
+
+        expect(response.statusCode).toBe(200)
+        expect(JSON.parse(response.payload)).toEqual([publishedPost, draftPost])
+    })
+
+    it('gets a published post by id without a token', async () => {
+        mockGetHandler.mockResolvedValueOnce(publishedPost)
+
+        const response = await app.inject({ method: 'GET', url: '/post/1' })
+
+        expect(response.statusCode).toBe(200)
+        expect(JSON.parse(response.payload)).toEqual(publishedPost)
+    })
+
+    it('returns 404 for a draft post requested anonymously', async () => {
+        mockGetHandler.mockResolvedValueOnce(draftPost)
+
+        const response = await app.inject({ method: 'GET', url: '/post/2' })
+
+        // 404 e nao 403 de proposito: um 403 confirmaria que o post existe.
+        expect(response.statusCode).toBe(404)
+        expect(response.json()).toEqual({ message: 'Post not found' })
+    })
+
+    it('hides draft posts from an anonymous search', async () => {
+        mockSearchHandler.mockResolvedValueOnce([publishedPost, draftPost])
+
+        const response = await app.inject({ method: 'GET', url: '/post/search?q=post' })
+
+        expect(response.statusCode).toBe(200)
+        expect(JSON.parse(response.payload)).toEqual([publishedPost])
+        expect(mockSearchHandler).toHaveBeenCalledWith('post')
+    })
+
+    it('still requires a token to create a post', async () => {
+        const response = await app.inject({
+            method: 'POST',
+            url: '/post',
+            payload: {
+                user_id: 7,
+                title: 'Sem token',
+                slug: 'sem-token',
+                content: 'Não deveria passar',
+            },
+        })
+
+        expect(response.statusCode).toBe(401)
+        expect(mockHandler).not.toHaveBeenCalled()
+    })
+
+    it('still requires a token to update a post', async () => {
+        const response = await app.inject({
+            method: 'PUT',
+            url: '/post/1',
+            payload: { title: 'Sem token' },
+        })
+
+        expect(response.statusCode).toBe(401)
+        expect(mockUpdateHandler).not.toHaveBeenCalled()
+    })
+
+    it('still requires a token to delete a post', async () => {
+        const response = await app.inject({ method: 'DELETE', url: '/post/1' })
+
+        expect(response.statusCode).toBe(401)
+        expect(mockDeleteHandler).not.toHaveBeenCalled()
+    })
+
+    // ---------------------------------------------------------------------
+    // Categorias no update. Antes disto o Zod descartava a chave e a
+    // categoria de um post era imutavel depois de criado.
+    // ---------------------------------------------------------------------
+
+    it('updates the post categories', async () => {
+        mockUpdateHandler.mockResolvedValueOnce({ ...publishedPost, categories: [{ id: 2 }] })
+
+        const response = await app.inject({
+            method: 'PUT',
+            url: '/post/1',
+            headers,
+            payload: { categories: [{ id: 2 }] },
+        })
+
+        expect(response.statusCode).toBe(200)
+        expect(mockUpdateHandler).toHaveBeenCalledWith(1, { categories: [{ id: 2 }] })
+    })
+
+    it('keeps the categories untouched when the body omits them', async () => {
+        mockUpdateHandler.mockResolvedValueOnce(publishedPost)
+
+        const response = await app.inject({
+            method: 'PUT',
+            url: '/post/1',
+            headers,
+            payload: { title: 'Só o título' },
+        })
+
+        expect(response.statusCode).toBe(200)
+        // A chave nao pode aparecer: ausente significa "nao mexe".
+        expect(mockUpdateHandler).toHaveBeenCalledWith(1, { title: 'Só o título' })
+    })
+
+    it('clears the categories when the body sends an empty array', async () => {
+        mockUpdateHandler.mockResolvedValueOnce({ ...publishedPost, categories: [] })
+
+        const response = await app.inject({
+            method: 'PUT',
+            url: '/post/1',
+            headers,
+            payload: { categories: [] },
+        })
+
+        expect(response.statusCode).toBe(200)
+        expect(mockUpdateHandler).toHaveBeenCalledWith(1, { categories: [] })
     })
 })

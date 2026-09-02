@@ -12,13 +12,17 @@ import { authorizeRoles } from '@/http/middlewares/authorize-roles';
 
 export async function postRoutes(app: FastifyInstance) {
     app.post('/post', { preHandler: authorizeRoles(['admin', 'professor']) }, create)
-    app.get('/post', { preHandler: authorizeRoles(['admin', 'professor', 'aluno']) }, fetch)
-    app.get('/post/search', { preHandler: authorizeRoles(['admin', 'professor', 'aluno']) }, search)
-    app.get('/post/:id', { preHandler: authorizeRoles(['admin', 'professor', 'aluno']) }, get)
+
+    // Leitura liberada: o blog precisa ser lido por quem nao tem conta. A lista
+    // de rotas publicas vive em `jwt-validate.ts` e precisa casar com estas.
+    // Rascunho continua escondido de anonimo — o filtro esta nos controllers.
+    app.get('/post', fetch)
+    app.get('/post/search', search)
+    app.get('/post/:id', get)
     app.put('/post/:id', { preHandler: authorizeRoles(['admin', 'professor']) }, update)
     app.delete('/post/:id', { preHandler: authorizeRoles(['admin', 'professor']) }, remove)
 
     app.post('/post/:id/thumbnail', { preHandler: authorizeRoles(['admin', 'professor']) }, uploadThumbnail)
-    app.get('/post/:id/thumbnail', { preHandler: authorizeRoles(['admin', 'professor', 'aluno']) }, getThumbnail)
+    app.get('/post/:id/thumbnail', getThumbnail)
     app.delete('/post/:id/thumbnail', { preHandler: authorizeRoles(['admin', 'professor']) }, removeThumbnail)
 }

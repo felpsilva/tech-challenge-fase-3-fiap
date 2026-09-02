@@ -14,6 +14,14 @@ export async function update(request: FastifyRequest, reply: FastifyReply) {
         content: z.string().optional(),
         image_url: z.string().optional(),
         status: z.string().optional(),
+        // Sem isto o Zod descartava a chave e a categoria de um post era
+        // imutavel depois de criado. Só o `id` importa: o repositorio
+        // resolve as entidades pelo id, igual ao create.
+        categories: z.array(z.object({
+            id: z.coerce.number(),
+            name: z.string().optional(),
+            slug: z.string().optional(),
+        })).optional(),
     })
 
     const { id } = updateParamsSchema.parse(request.params)

@@ -55,16 +55,37 @@ export class PostRepository implements IPostRepository {
     }
 
     async update(id: number, post: Partial<IPost>): Promise<IPost | null> {
-        const existingPost = await this.repository.findOne({ where: { id } })
+        // As relacoes precisam vir carregadas: sem `categories` aqui, o save
+        // abaixo interpretaria a colecao ausente e mexeria na tabela de juncao
+        // sem que ninguem tenha pedido.
+        const existingPost = await this.repository.findOne({
+            where: { id },
+            relations: { user: true, categories: true },
+        })
 
         if (!existingPost) {
             return null
         }
 
+        const { categories, ...fields } = post
+
         const updatedPost = this.repository.merge(existingPost, {
-            ...post,
+            ...fields,
             updated_at: new Date(),
         })
+
+        // `categories` fica fora do merge de proposito: o corpo da requisicao
+        // manda `[{ id }]`, e passar isso adiante gravaria entidades pela
+        // metade. Resolver pelo id e o mesmo caminho do create.
+        if (categories) {
+            const categoryIds = categories
+                .map((category) => category.id)
+                .filter((categoryId): categoryId is number => categoryId !== undefined && categoryId !== null)
+
+            updatedPost.categories = categoryIds.length > 0
+                ? await this.categoryRepository.findBy({ id: In(categoryIds) })
+                : []
+        }
 
         return await this.repository.save(updatedPost)
     }

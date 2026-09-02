@@ -1,4 +1,5 @@
 import { makeSearchPostsUseCase } from '@/use-cases/factory/make-search-posts-use-case';
+import { isPublished } from '@/utils/post-status';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import z from 'zod';
 
@@ -13,6 +14,13 @@ export async function search(request: FastifyRequest, reply: FastifyReply) {
 
     try {
         const posts = await searchPostsUseCase.handler(q)
+
+        // Mesmo cuidado do fetch: a busca nao pode ser a porta dos fundos
+        // para o texto de um rascunho.
+        if (!request.user) {
+            return reply.status(200).send(posts.filter((post) => isPublished(post.status)))
+        }
+
         return reply.status(200).send(posts)
     } catch (error) {
         console.error('Error searching posts:', error)

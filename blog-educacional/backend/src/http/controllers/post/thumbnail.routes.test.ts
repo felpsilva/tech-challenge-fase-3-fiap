@@ -55,11 +55,9 @@ describe('Post thumbnail routes', () => {
                 { preHandler: authorizeRoles(['admin', 'professor']) },
                 uploadThumbnail,
             )
-            appInstance.get(
-                '/post/:id/thumbnail',
-                { preHandler: authorizeRoles(['admin', 'professor', 'aluno']) },
-                getThumbnail,
-            )
+            // Espelha `post/routes.ts`: entregar o arquivo e publico, porque
+            // uma tag <img> nao manda header Authorization.
+            appInstance.get('/post/:id/thumbnail', getThumbnail)
             appInstance.delete(
                 '/post/:id/thumbnail',
                 { preHandler: authorizeRoles(['admin', 'professor']) },

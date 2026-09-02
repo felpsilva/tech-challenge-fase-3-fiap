@@ -1,4 +1,5 @@
 import { makeGetPostUseCase } from '@/use-cases/factory/make-get-post-use-case';
+import { isPublished } from '@/utils/post-status';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import z from 'zod';
 
@@ -15,6 +16,12 @@ export async function get(request: FastifyRequest, reply: FastifyReply) {
         const post = await getPostUseCase.handler(id)
 
         if (!post) {
+            return reply.status(404).send({ message: 'Post not found' })
+        }
+
+        // Para anonimo, rascunho responde 404 e nao 403: a existencia do post
+        // tambem e informacao que ainda nao foi publicada.
+        if (!request.user && !isPublished(post.status)) {
             return reply.status(404).send({ message: 'Post not found' })
         }
 
