@@ -108,9 +108,6 @@ export function UserTable() {
                         </thead>
                         <tbody>
                             {users.map((item) => {
-                                // Sem esta trava, um clique deixa o painel
-                                // inalcançável para sempre e não existe tela
-                                // para desfazer.
                                 const isSelf = item.id === currentUser?.id
                                 const draft = drafts[item.id] ?? normalizePermission(item.permission)
                                 const isDirty = draft !== item.permission
@@ -143,10 +140,6 @@ export function UserTable() {
                                                     ))}
                                                 </Select>
 
-                                                {/* Botão explícito em vez de salvar no
-                                                    change: quem navega o select pelo
-                                                    teclado passaria por cada opção e
-                                                    disparia uma gravação em cada uma. */}
                                                 <Button
                                                     type="button"
                                                     $variant="secondary"

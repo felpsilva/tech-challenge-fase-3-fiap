@@ -38,17 +38,12 @@ describe('PostCard', () => {
     it('clamps the excerpt to two lines with css, not javascript', () => {
         renderWithTheme(<PostCard post={toPostCard(post)} />)
 
-        // Lê o CSS que o styled-components realmente injetou: o corte tem de
-        // ser do navegador, porque "duas linhas" depende da largura
-        // renderizada. Truncar por contagem de caracteres daria duas linhas no
-        // desktop e quatro no celular.
         const injectedCss = Array.from(document.querySelectorAll('style'))
             .map((tag) => tag.textContent ?? '')
             .join('')
 
         expect(injectedCss).toContain('-webkit-line-clamp:2')
 
-        // E o texto completo continua no DOM para o leitor de tela.
         expect(screen.getByText(/Primeiro parágrafo/)).toBeInTheDocument()
     })
 

@@ -14,17 +14,13 @@ import { MAX_THUMBNAIL_SIZE_BYTES } from './utils/image-file';
 
 export const app = fastify()
 
-// O CORS entra antes de tudo: sem ele o browser nem chega a mandar a
-// requisicao real. A origem vem do env porque dev (localhost:3000) e o
-// dominio publicado sao diferentes.
 app.register(fastifyCors, {
     origin: env.CORS_ORIGIN.split(',').map((origin) => origin.trim()),
-    // O default do plugin e so GET,HEAD,POST — sem ampliar, o preflight de
-    // PUT e DELETE e recusado e a area administrativa nao funciona.
+    // O default do plugin e so GET,HEAD,POST: sem ampliar, o preflight de PUT e DELETE
+    // e recusado.
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    // Content-Disposition nao e safelisted: sem expor, o browser nao le o
-    // filename que o GET da thumbnail devolve.
+    // Content-Disposition nao e safelisted: sem expor, o browser nao le o filename.
     exposedHeaders: ['Content-Disposition'],
     maxAge: 86400,
 })

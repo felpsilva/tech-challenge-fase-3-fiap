@@ -6,7 +6,6 @@ import { PageDescription, PageHeader, PageTitle } from '@/components/ui/page-con
 
 export default function AdminUsersPage() {
     return (
-        // `adminOnly`: a rota /user do backend é restrita a admin.
         <RequireSession adminOnly>
             <PageHeader>
                 <div>

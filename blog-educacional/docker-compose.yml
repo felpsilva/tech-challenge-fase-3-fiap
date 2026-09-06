@@ -4,8 +4,6 @@ services:
     container_name: blog-neon-init
     restart: "no"
     env_file:
-      # Configuracao compartilhada na raiz do repositorio, um nivel acima
-      # deste arquivo. O `environment` abaixo tem precedencia sobre ela.
       - ../.env
     volumes:
       - ./db/init.sql:/init.sql:ro
@@ -14,21 +12,16 @@ services:
 
   backend:
     build:
-      # Contexto na raiz do repositorio, um nivel acima deste arquivo: e o que
-      # permite ao Dockerfile copiar o `.env` compartilhado para dentro da
-      # imagem. Com o contexto em `./backend` o arquivo fica fora do alcance.
+      # Contexto na raiz: e o que permite ao Dockerfile copiar o `.env` da raiz.
       context: ..
       dockerfile: blog-educacional/backend/Dockerfile
     container_name: blog-backend
     restart: unless-stopped
     env_file:
-      # Configuracao compartilhada na raiz do repositorio, um nivel acima
-      # deste arquivo. O `environment` abaixo tem precedencia sobre ela.
       - ../.env
     environment:
       NODE_ENV: development
       PORT: 3001
-      # Origem do frontend no compose. Sem isto o browser e barrado no CORS.
       CORS_ORIGIN: http://localhost:3000
     ports:
       - "3001:3001"
@@ -40,10 +33,8 @@ services:
     build:
       context: ./frontend
       args:
-        # URL que o NAVEGADOR usa: e a porta publicada no host, e fica
-        # embutida no bundle em tempo de build — por isso vem como arg.
-        # Apontar para http://backend:3001 aqui faz o SSR funcionar e toda
-        # interacao do cliente falhar com erro de DNS.
+        # URL usada pelo NAVEGADOR, embutida no bundle em tempo de build — por
+        # isso vem como arg. `http://backend:3001` aqui quebraria o cliente.
         NEXT_PUBLIC_API_URL: http://localhost:3001
     container_name: blog-frontend
     restart: unless-stopped

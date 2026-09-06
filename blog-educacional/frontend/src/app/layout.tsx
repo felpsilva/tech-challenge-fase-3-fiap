@@ -17,10 +17,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
     return (
-        // `lang` em pt-BR importa para a pronúncia em leitor de tela.
         <html lang="pt-BR">
             <body>
-                {/* O registry envolve o tema para capturar também o global style. */}
                 <StyledComponentsRegistry>
                     <AppThemeProvider>
                         <AuthProvider>

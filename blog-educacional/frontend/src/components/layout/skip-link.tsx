@@ -2,7 +2,6 @@
 
 import styled from 'styled-components'
 
-/** Invisivel ate receber foco: primeiro Tab da pagina pula para o conteudo. */
 export function SkipLink() {
     return <Link href="#conteudo-principal">Pular para o conteúdo</Link>
 }

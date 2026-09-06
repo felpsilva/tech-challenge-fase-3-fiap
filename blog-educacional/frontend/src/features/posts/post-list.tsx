@@ -13,21 +13,6 @@ import { from } from '@/styles/media'
 import { deaccent } from '@/lib/utils/slugify'
 import type { PostCardData } from '@/types/view'
 
-/**
- * A busca filtra a lista já carregada em vez de chamar `GET /post/search`.
- *
- * Motivos, em ordem de peso:
- * 1. O `ILIKE` do backend é insensível a caixa mas NÃO a acento — procurar
- *    "matematica" não acharia "Matemática", que num blog em português é
- *    defeito, não detalhe. Aqui os dois lados passam por `deaccent`.
- * 2. A API não pagina, então a lista completa já está em memória: filtrar é
- *    um `Array.filter` instantâneo, sem rede, sem spinner e sem corrida entre
- *    requisições em voo.
- * 3. `q` é obrigatório com `min(1)`, então o caminho de busca vazia teria de
- *    ser tratado à parte de qualquer forma.
- * 4. Casa termo por termo (E lógico): "matematica basica" acha "Matemática
- *    Básica", o que um único `%q%` no SQL não faria.
- */
 export function PostList({ posts }: { posts: PostCardData[] }) {
     const [query, setQuery] = useState('')
     const debouncedQuery = useDebouncedValue(query, 250)
@@ -66,7 +51,6 @@ export function PostList({ posts }: { posts: PostCardData[] }) {
                     )}
                 </FormField>
 
-                {/* Anuncia o resultado para quem não vê a grade mudar. */}
                 <ResultCount role="status">
                     {totalItems === 1 ? '1 post encontrado' : `${totalItems} posts encontrados`}
                 </ResultCount>

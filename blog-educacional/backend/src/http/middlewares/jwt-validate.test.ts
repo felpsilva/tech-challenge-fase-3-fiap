@@ -5,11 +5,6 @@ import { validateJwt } from './jwt-validate'
 
 const ALLOWED_ORIGIN = 'http://localhost:3000'
 
-/**
- * Monta uma instancia minima com a mesma ordem de registro do `app.ts`.
- * Importar `@/app` aqui nao serve: ele inicializa o TypeORM e valida o env
- * de verdade no import.
- */
 async function createTestApp() {
     const app = fastify()
 
@@ -23,11 +18,8 @@ async function createTestApp() {
 
     app.addHook('onRequest', validateJwt)
 
-    // Rota parametrizada publica: e o caso que a allowlist antiga, que
-    // comparava a URL crua, nunca conseguia casar.
     app.get('/post/:id', async (request) => ({
         id: (request.params as { id: string }).id,
-        // Devolve quem o middleware identificou, para provar o soft-verify.
         username: request.user?.username ?? null,
     }))
 

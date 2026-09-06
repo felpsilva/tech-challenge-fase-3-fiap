@@ -8,12 +8,6 @@ interface FormErrorSummaryProps {
     fieldErrors?: Record<string, string>
 }
 
-/**
- * Resumo de erro no topo do formulario. É o recurso de acessibilidade de
- * maior retorno num app cheio de formulário: recebe foco no envio falho, e
- * quem usa teclado ou leitor de tela ouve o que deu errado em vez de caçar
- * campo vermelho pela tela.
- */
 export function FormErrorSummary({ message, fieldErrors }: FormErrorSummaryProps) {
     const ref = useRef<HTMLDivElement>(null)
     const entries = Object.entries(fieldErrors ?? {})

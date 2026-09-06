@@ -7,13 +7,6 @@ import { resolve } from 'node:path'
 
 import { loadRootEnv, resolveEnvFiles } from './load-root-env'
 
-/**
- * Repositorio de mentira com a mesma forma do real:
- *
- *   <raiz>/.git
- *   <raiz>/.env
- *   <raiz>/blog-educacional/frontend/   <- cwd do frontend
- */
 function createFakeRepo() {
     const root = mkdtempSync(resolve(tmpdir(), 'root-env-'))
     const packageDir = resolve(root, 'blog-educacional', 'frontend')
@@ -103,8 +96,6 @@ describe('loadRootEnv', () => {
     })
 
     it('nao sobrescreve variavel ja definida no ambiente', () => {
-        // E o que faz o build-arg do Docker e o `env` do workflow mandarem
-        // mais alto que o arquivo versionado.
         process.env.ROOT_ENV_TEST_PRESET = 'do-ambiente'
         writeFileSync(resolve(repo.root, '.env'), 'ROOT_ENV_TEST_PRESET=do-arquivo\n')
 

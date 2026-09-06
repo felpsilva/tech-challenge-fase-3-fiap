@@ -1,19 +1,12 @@
 import { createAuthenticatedTestApp, testUserCredentials } from '@/test/helpers/authenticated-test-app'
 import { globalErrorHandler } from '@/utils/global-error-handler'
 
-/**
- * Trava o `id` nas claims. Sem ele, um professor nao tem como descobrir o
- * proprio `user_id` — o `POST /post` exige esse campo no corpo e as rotas de
- * `/user` sao restritas a admin. Ou seja: professor nenhum criaria post.
- */
 describe('POST /user/signin token claims', () => {
     let app: Awaited<ReturnType<typeof createAuthenticatedTestApp>>['app']
     let token: string
 
     beforeAll(async () => {
         const testApp = await createAuthenticatedTestApp(async (appInstance) => {
-            // O helper nao instala o error handler que o `app.ts` registra, e
-            // sem ele o InvalidCredentialsError sai como 500.
             appInstance.setErrorHandler(globalErrorHandler)
         })
 

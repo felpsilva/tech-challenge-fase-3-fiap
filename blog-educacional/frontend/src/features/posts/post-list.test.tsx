@@ -55,8 +55,6 @@ describe('PostList', () => {
 
         await user.type(screen.getByLabelText(/Buscar posts/), 'basica matematica')
 
-        // Espera a condição que só é verdadeira DEPOIS do debounce: aguardar
-        // pela presença do post que já estava na tela passaria de imediato.
         await waitFor(() => {
             expect(screen.queryByText('História do Brasil')).not.toBeInTheDocument()
         })

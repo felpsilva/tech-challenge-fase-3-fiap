@@ -54,7 +54,6 @@ export function PostTable() {
 
     return (
         <>
-            {/* Região viva para o resultado da exclusão ser anunciado. */}
             <StatusRegion aria-live="polite">{status}</StatusRegion>
 
             {posts.length === 0 ? (
@@ -91,9 +90,6 @@ export function PostTable() {
                                         <td data-label="Criado em">{formatDate(post.created_at)}</td>
                                         <td data-label="Ações">
                                             <RowActions>
-                                                {/* Nome acessível único por linha: uma lista de
-                                                    botões "Editar" iguais é inutilizável por
-                                                    leitor de tela e comando de voz. */}
                                                 <LinkButton
                                                     as={Link}
                                                     href={`/admin/posts/${post.id}/edit`}

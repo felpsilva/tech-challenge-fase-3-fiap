@@ -19,8 +19,7 @@ export async function get(request: FastifyRequest, reply: FastifyReply) {
             return reply.status(404).send({ message: 'Post not found' })
         }
 
-        // Para anonimo, rascunho responde 404 e nao 403: a existencia do post
-        // tambem e informacao que ainda nao foi publicada.
+        // 404 e nao 403 de proposito: um 403 confirmaria que o post existe.
         if (!request.user && !isPublished(post.status)) {
             return reply.status(404).send({ message: 'Post not found' })
         }

@@ -64,9 +64,8 @@ jobs:
       - name: Testes
         run: npm test
 
-      # Sem `NEXT_PUBLIC_API_URL` no ambiente de proposito: o build precisa
-      # pegar a URL do `.env.production` da raiz. E o unico ponto do CI que
-      # exercita a cadeia raiz -> next.config -> bundle.
+      # Sem `NEXT_PUBLIC_API_URL` no ambiente de proposito: o build tem de pegar
+      # a URL do `.env.production` da raiz.
       - name: Build
         run: npm run build
 
@@ -108,10 +107,7 @@ jobs:
       - name: Build e Push da imagem
         uses: docker/build-push-action@v6
         with:
-          # Contexto na raiz: o Dockerfile do backend copia o `.env`
-          # compartilhado para dentro da imagem, e ele vive aqui. Com o
-          # contexto em `blog-educacional/backend` o container sobe sem
-          # DB_HOST/JWT_SECRET e morre na validacao do env.
+          # Contexto na raiz: o Dockerfile do backend copia o `.env` que vive aqui.
           context: .
           file: blog-educacional/backend/Dockerfile
           push: true
@@ -153,14 +149,8 @@ jobs:
           context: blog-educacional/frontend
           file: blog-educacional/frontend/Dockerfile
           push: true
-          # NEXT_PUBLIC_* e inlinado no bundle do navegador em tempo de build.
-          # O contexto do build e `blog-educacional/frontend`, entao o `.env`
-          # da raiz nao chega ate aqui — a URL precisa vir como arg. Pode ser
-          # sobrescrita pela variavel de repositorio NEXT_PUBLIC_API_URL (em
-          # vars, nao em secrets: e URL publica, e um secret mascarado em log
-          # tornaria uma configuracao errada indepuravel).
-          # O `||` cobre a variavel de repositorio ausente: sem ele a imagem
-          # sairia com a URL vazia e falharia em producao com erro opaco.
+          # NEXT_PUBLIC_* e inlinado no bundle em tempo de build e o `.env` da raiz
+          # nao chega neste contexto: a URL precisa vir como arg, com fallback.
           build-args: |
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL || 'https://blog-educacional-backend-1.onrender.com' }}
           tags: ${{ steps.meta.outputs.tags }}

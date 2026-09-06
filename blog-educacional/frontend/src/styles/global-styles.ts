@@ -34,7 +34,6 @@ export const GlobalStyles = createGlobalStyle`
         border-radius: 2px;
     }
 
-    /* Remove o anel so quando o :focus-visible ja cuidou do teclado. */
     :focus:not(:focus-visible) { outline: none; }
 
     a {

@@ -18,8 +18,6 @@ export async function getThumbnail(request: FastifyRequest, reply: FastifyReply)
             return reply.status(404).send({ message: 'Thumbnail not found' })
         }
 
-        // O binário sai cru, com o seu próprio Content-Type. Serializar o
-        // Buffer em JSON custaria ~33% a mais e forçaria decode no cliente.
         return reply
             .status(200)
             .header('Content-Type', thumbnail.mime_type)

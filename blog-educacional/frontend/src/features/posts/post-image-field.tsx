@@ -21,7 +21,6 @@ interface PostImageFieldProps {
     fileError?: string | undefined
     thumbnailAction: ThumbnailAction
     onThumbnailActionChange: (action: ThumbnailAction) => void
-    /** Presente na edição: mostra a thumbnail que já existe. */
     existingPostId?: number
     existingVersion?: string
 }
@@ -38,11 +37,8 @@ export function PostImageField({
     existingPostId,
     existingVersion,
 }: PostImageFieldProps) {
-    // Derivada em vez de guardada em estado: evita o render em cascata de
-    // setState dentro de efeito.
     const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
 
-    // Sem o revoke o blob fica pendurado na memória a cada troca de arquivo.
     useEffect(() => () => {
         if (preview) {
             URL.revokeObjectURL(preview)

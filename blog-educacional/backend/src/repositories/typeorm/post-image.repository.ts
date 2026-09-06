@@ -40,7 +40,6 @@ export class PostImageRepository implements IPostImageRepository {
     }
 
     async findMetadataByPostId(post_id: number): Promise<IPostImageMetadata | null> {
-        // `data` tem select: false na entidade, então este find já vem leve.
         const image = await this.repository.findOne({ where: { post_id } })
 
         return image ? toMetadata(image) : null

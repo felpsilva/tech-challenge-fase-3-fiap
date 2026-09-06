@@ -19,7 +19,6 @@ const tones = {
     `,
 } satisfies Record<Tone, ReturnType<typeof css>>
 
-// Sempre com texto dentro: a cor e reforco, nunca a unica informacao.
 export const Badge = styled.span<{ $tone?: Tone }>`
     display: inline-flex;
     align-items: center;

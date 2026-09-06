@@ -41,9 +41,6 @@ export function PostArticle({ post }: { post: Post }) {
                     />
                 </Cover>
 
-                {/* Sem dangerouslySetInnerHTML: o conteúdo é texto do banco e
-                    injetá-lo como HTML abriria XSS armazenado. Os parágrafos
-                    vêm da quebra de linha. */}
                 <Content>
                     {post.content.split(/\n{2,}/).map((paragraph, index) => (
                         <p key={index}>{paragraph}</p>

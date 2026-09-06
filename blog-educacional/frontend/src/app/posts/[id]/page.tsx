@@ -7,7 +7,6 @@ import { PostArticle } from '@/features/posts/post-article'
 import type { Post } from '@/types/api'
 
 interface PostPageProps {
-    // No Next 16 `params` é Promise: o acesso síncrono foi removido.
     params: Promise<{ id: string }>
 }
 

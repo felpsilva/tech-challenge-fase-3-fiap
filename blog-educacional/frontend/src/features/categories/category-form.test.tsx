@@ -33,7 +33,6 @@ describe('CategoryForm', () => {
         await user.clear(slugInput)
         await user.type(slugInput, 'fisica-2027')
 
-        // Mexer no título depois disso não pode desfazer o slug escolhido.
         await user.type(nameInput, ' Moderna')
 
         await waitFor(() => expect(nameInput).toHaveValue('Física Moderna'))

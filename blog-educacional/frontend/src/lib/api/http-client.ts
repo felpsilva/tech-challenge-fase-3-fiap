@@ -7,10 +7,6 @@ type UnauthorizedHandler = () => void
 
 let onUnauthorized: UnauthorizedHandler = () => { }
 
-/**
- * O interceptor nao pode importar o contexto de auth (ciclo de import), e o
- * contexto nao pode recriar o cliente. O handler e injetado pelo provider.
- */
 export function setUnauthorizedHandler(handler: UnauthorizedHandler) {
     onUnauthorized = handler
 }
@@ -31,8 +27,7 @@ httpClient.interceptors.request.use((config) => {
     return config
 })
 
-// Sem `Content-Type` fixo na instancia: definir 'application/json' aqui
-// quebraria o upload, porque o axios precisa montar o boundary do multipart.
+// Sem Content-Type fixo: o axios precisa montar o boundary do multipart.
 httpClient.interceptors.response.use(
     (response) => response,
     (error) => {

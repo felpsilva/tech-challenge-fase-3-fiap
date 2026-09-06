@@ -6,11 +6,6 @@ function columnsOf(target: Function) {
     return getMetadataArgsStorage().columns.filter((column) => column.target === target)
 }
 
-/**
- * Trava o vazamento do hash de senha: sem `select: false` na coluna, todo
- * find() de usuario — inclusive o join do autor em GET /post, liberado para
- * o perfil `aluno` — devolvia o hash bcrypt de admins e professores.
- */
 describe('User entity password column', () => {
     it('is never selected by default', () => {
         const password = columnsOf(User).find((column) => column.propertyName === 'password')
@@ -34,9 +29,6 @@ describe('User entity password column', () => {
         )
 
         expect(authorRelation).toBeDefined()
-        // A relacao resolve para a entidade User, entao herda o select: false
-        // da coluna: nao existe caminho de leitura que traga o hash sem um
-        // addSelect explicito.
         expect((authorRelation!.type as () => Function)()).toBe(User)
     })
 })

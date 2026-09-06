@@ -14,9 +14,6 @@ import type { Post } from '@/types/api'
 export default async function HomePage() {
     const result = await serverGet<Post[]>('/post', { revalidate: 60, tags: ['posts'] })
 
-    // O backend já esconde rascunho de quem não tem token, mas o filtro fica
-    // aqui também: a home é pública mesmo quando um docente está logado, e
-    // nesse caso a API devolveria os rascunhos dele.
     const posts = result.ok
         ? result.data.filter((post) => isPublished(post.status)).map(toPostCard)
         : []

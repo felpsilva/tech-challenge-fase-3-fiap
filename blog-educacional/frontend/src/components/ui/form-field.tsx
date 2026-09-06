@@ -19,15 +19,6 @@ interface FormFieldProps {
     children: (props: FieldRenderProps) => ReactNode
 }
 
-/**
- * Primitivo por onde passa todo campo do app. A ligacao de rotulo, dica e
- * erro fica aqui para nao depender de ninguem lembrar em cada formulario.
- *
- * Dois detalhes: o `aria-describedby` é condicional porque apontar para um id
- * inexistente é descartado em silêncio por parte dos leitores de tela; e o
- * `aria-invalid` só vai como `true` — mandar `false` faz alguns leitores
- * anunciarem "válido" a cada campo, o que é ruído.
- */
 export function FormField({ name, label, hint, error, required, children }: FormFieldProps) {
     const id = `field-${name}`
     const hintId = hint ? `${id}-hint` : undefined
@@ -90,7 +81,6 @@ const Hint = styled.p`
     color: ${({ theme }) => theme.colors.textMuted};
 `
 
-// Marcador de texto junto do icone: cor sozinha nao comunica erro (WCAG 1.4.1).
 const ErrorText = styled.p`
     font-size: ${({ theme }) => theme.typography.sizes.xs};
     font-weight: ${({ theme }) => theme.typography.weights.medium};

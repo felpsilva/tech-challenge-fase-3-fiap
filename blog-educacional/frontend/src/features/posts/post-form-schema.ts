@@ -4,11 +4,6 @@ import { POST_STATUSES } from '@/types/post-status'
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
-/**
- * Os limites espelham o banco de propósito: `title`/`slug`/`image_url` são
- * varchar(255) e `status` é varchar(50). Sem esse `max`, um valor grande volta
- * como 500 (QueryFailedError) em vez de erro de validação legível.
- */
 export const postFormSchema = yup.object({
     title: yup
         .string()
@@ -35,9 +30,6 @@ export const postFormSchema = yup.object({
         .url('Informe uma URL válida (começando com http).')
         .optional(),
     categoryIds: yup.array().of(yup.number().required()).default([]),
-    // O `type` do arquivo vem do sistema operacional e é falsificável: a
-    // autoridade é a checagem por magic bytes do backend. Isto aqui é só
-    // para falhar rápido, com mensagem boa.
     thumbnailFile: yup
         .mixed<File>()
         .test('size', 'A imagem deve ter no máximo 2 MB.', (file) =>

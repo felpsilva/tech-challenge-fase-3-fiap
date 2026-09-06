@@ -16,12 +16,6 @@ interface ConfirmDialogProps {
     onCancel: () => void
 }
 
-/**
- * Usa o <dialog> nativo com `showModal()`: prisão de foco, `Esc` para fechar,
- * fundo inerte e empilhamento na top layer vêm da plataforma — justamente o
- * que modal feito à mão erra. `window.confirm` não serve porque não estiliza
- * e bloqueia a thread.
- */
 export function ConfirmDialog({
     open,
     title,
@@ -44,7 +38,6 @@ export function ConfirmDialog({
 
         if (open && !dialog.open) {
             dialog.showModal()
-            // Foco inicial no Cancelar, nunca no botao destrutivo.
             cancelRef.current?.focus()
         }
 
@@ -66,7 +59,6 @@ export function ConfirmDialog({
             <Title id="confirm-dialog-title">{title}</Title>
             <Description id="confirm-dialog-description">{description}</Description>
 
-            {/* O erro aparece dentro do dialogo em vez de fechar a janela. */}
             {error && <Feedback $tone="danger">{error}</Feedback>}
 
             <Actions>

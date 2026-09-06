@@ -11,21 +11,11 @@ function decodeBase64Url(segment: string) {
     const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
     const raw = atob(padded)
 
-    // O TextDecoder e necessario para username com acento sobreviver: `atob`
-    // devolve bytes latin1, nao UTF-8.
     return new TextDecoder().decode(Uint8Array.from(raw, (char) => char.charCodeAt(0)))
 }
 
-/**
- * Le as claims SEM verificar a assinatura, e isso e proposital.
- *
- * O `JWT_SECRET` nao pode chegar ao frontend (ficaria numa camada da imagem
- * Docker e no bundle). Consequencia honesta: alguem pode forjar um cookie com
- * `permission: 'admin'` e ver a casca do painel — e nao vera dado nenhum,
- * porque toda requisicao leva esse token forjado ao Fastify, que confere a
- * assinatura e responde 401. O `proxy.ts` faz navegacao, nao autorizacao. A
- * autorizacao real e a do backend.
- */
+// Le as claims SEM verificar a assinatura: o JWT_SECRET nao pode chegar ao frontend.
+// Quem autoriza de verdade e o backend, que confere o token em toda rota protegida.
 export function decodeJwtPayload(token: string): JwtClaims | null {
     try {
         const segment = token.split('.')[1]

@@ -13,23 +13,8 @@ interface PostThumbnailProps {
 
 type Source = 'thumbnail' | 'imageUrl' | 'placeholder'
 
-/**
- * Precedência: arquivo enviado > `image_url` > espaço vazio.
- *
- * A thumbnail ganha porque é validada (magic bytes, ≤2MB, três MIME types) e
- * hospedada por nós; `image_url` é texto livre apontando para terceiro, que
- * pode dar 404 ou bloquear hotlink.
- *
- * O `onError` rebaixa a fonte um passo por vez e nunca entra em laço. Como a
- * API não expõe um `has_thumbnail`, a primeira tentativa é especulativa e
- * custa um 404 nos posts sem imagem — o `loading="lazy"` faz esse custo só
- * existir para o que entra na tela.
- *
- * É um `<img>` e não `next/image` por dois motivos: `image_url` é texto livre,
- * então o conjunto de hosts para `remotePatterns` é desconhecido por
- * definição; e o Next 16 passou a bloquear otimização de IP local, o que
- * quebraria a thumbnail vinda de `localhost:3001` em desenvolvimento.
- */
+// <img> e nao next/image: `image_url` e texto livre (hosts desconhecidos para
+// `remotePatterns`) e o Next 16 bloqueia otimizacao de IP local.
 export function PostThumbnail({ postId, imageUrl, version, alt = '' }: PostThumbnailProps) {
     const [source, setSource] = useState<Source>('thumbnail')
 
@@ -54,7 +39,6 @@ export function PostThumbnail({ postId, imageUrl, version, alt = '' }: PostThumb
     )
 }
 
-// `aspect-ratio` fixo elimina o deslocamento de layout enquanto carrega.
 const Frame = styled.div`
     aspect-ratio: 16 / 9;
     overflow: hidden;

@@ -5,8 +5,6 @@ import { IPostImage } from './models/post-image.interface';
     name: 'post_images',
 })
 export class PostImage implements IPostImage {
-    // Chave primária e estrangeira ao mesmo tempo: garante uma thumbnail por
-    // post. A FK e o ON DELETE CASCADE são declarados em db/init.sql.
     @PrimaryColumn({
         name: 'post_id',
         type: 'integer',
@@ -33,8 +31,6 @@ export class PostImage implements IPostImage {
     })
     size_bytes: number
 
-    // select: false mantém o binário fora de qualquer find() acidental.
-    // Só o findDataByPostId, via query builder, traz esta coluna.
     @Column({
         name: 'data',
         type: 'bytea',

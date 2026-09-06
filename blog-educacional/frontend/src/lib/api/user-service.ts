@@ -20,8 +20,6 @@ export async function fetchUsers() {
 }
 
 export async function createUser(payload: CreateUserPayload) {
-    // A resposta do POST nao traz `created_at` — o controller projeta so
-    // esses tres campos.
     const response = await httpClient.post<Pick<UserView, 'id' | 'username' | 'permission'>>(
         '/user',
         payload,

@@ -3,15 +3,7 @@ import { AUTH_COOKIE_NAME } from '@/lib/auth/auth-cookie'
 import { decodeJwtPayload, isExpired } from '@/lib/auth/decode-jwt'
 import { canAccessPanel, canManageUsers } from '@/types/permissions'
 
-/**
- * No Next 16 o `middleware.ts` foi renomeado para `proxy.ts`, com a funcao
- * exportada como `proxy`. Runtime e sempre nodejs, nao configuravel.
- *
- * Isto e navegacao, nao autorizacao: as claims sao lidas sem verificar
- * assinatura (ver `decode-jwt.ts`). Quem decide de verdade e o backend, que
- * confere o token em toda rota protegida. A propria documentacao do Next 16
- * avisa para nao depender so do proxy.
- */
+// Navegacao, nao autorizacao: as claims sao lidas sem verificar assinatura.
 export function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
     const token = request.cookies.get(AUTH_COOKIE_NAME)?.value
@@ -19,7 +11,6 @@ export function proxy(request: NextRequest) {
     const session = claims && !isExpired(claims) ? claims : null
 
     if (pathname === '/login') {
-        // Ja logado nao precisa ver tela de login.
         return session
             ? NextResponse.redirect(new URL('/admin/posts', request.url))
             : NextResponse.next()
@@ -29,7 +20,6 @@ export function proxy(request: NextRequest) {
         const url = new URL('/login', request.url)
         url.searchParams.set('next', pathname)
 
-        // Havia cookie mas a sessao morreu: vale avisar em vez de so redirecionar.
         if (token) {
             url.searchParams.set('reason', 'expired')
         }

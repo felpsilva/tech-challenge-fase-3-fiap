@@ -20,8 +20,6 @@ export function SiteHeader() {
                 <Nav aria-label="Navegação principal">
                     <Link href="/">Posts</Link>
 
-                    {/* Largura reservada até o cookie ser lido: sem isso a
-                        barra "salta" no primeiro render do cliente. */}
                     {!isReady && <Placeholder aria-hidden="true" />}
 
                     {isReady && !user && <Link href="/login">Entrar</Link>}

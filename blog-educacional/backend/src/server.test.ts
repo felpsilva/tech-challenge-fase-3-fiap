@@ -1,11 +1,4 @@
-/**
- * O que estes testes protegem: a ordem entre inicializar o banco e abrir a
- * porta. A regressao anterior nao aparecia em nenhum teste de rota, porque
- * `app.inject` nao passa pelo `server.ts` — so aparecia como a primeira
- * requisicao apos o deploy falhando com `EntityMetadataNotFoundError`.
- */
 
-/** Deixa a fila de microtasks drenar antes de inspecionar os mocks. */
 function flush() {
     return new Promise((resolve) => setTimeout(resolve, 0))
 }
@@ -34,7 +27,6 @@ describe('bootstrap do servidor', () => {
         require('./server')
         await flush()
 
-        // Se o listen fosse chamado no import, como antes, ja teria acontecido.
         expect(listen).not.toHaveBeenCalled()
 
         liberaBanco()
@@ -45,8 +37,6 @@ describe('bootstrap do servidor', () => {
     })
 
     it('sai com codigo 1 quando o banco falha, sem abrir a porta', async () => {
-        // Um processo vivo com banco inacessivel responderia erro em toda
-        // rota, e no painel do Render pareceria um deploy bem-sucedido.
         const listen = jest.fn()
         const exit = jest.spyOn(process, 'exit').mockImplementation((() => undefined) as never)
 

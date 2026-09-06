@@ -22,8 +22,6 @@ export async function signin(request: FastifyRequest, reply: FastifyReply) {
         throw new InvalidCredentialsError();
     };
 
-    // O `id` vai nas claims porque o frontend precisa dele para montar o
-    // `user_id` do post, e a rota que lista usuarios e restrita a admin.
     const token = await reply.jwtSign({ id: user.id!, username, permission: user.permission });
 
     return reply.status(200).send({ token });

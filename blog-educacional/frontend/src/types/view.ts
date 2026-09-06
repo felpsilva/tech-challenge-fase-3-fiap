@@ -7,6 +7,5 @@ export interface PostCardData {
     imageUrl: string | null
     thumbnailVersion: string
     categories: Array<{ id: number; name: string }>
-    /** Texto já normalizado para a busca no cliente (sem acento, minúsculo). */
     searchText: string
 }

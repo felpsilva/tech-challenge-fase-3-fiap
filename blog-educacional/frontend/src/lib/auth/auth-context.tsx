@@ -24,7 +24,6 @@ export interface SessionUser {
 interface AuthState {
     user: SessionUser | null
     isAuthenticated: boolean
-    /** `false` até o cookie ser lido no cliente. Evita mismatch de hidratação. */
     isReady: boolean
     signIn: (username: string, password: string) => Promise<void>
     signOut: (reason?: 'manual' | 'expired') => void
@@ -50,11 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         [router],
     )
 
-    // Ler o cookie num inicializador de useState causaria erro de hidratação:
-    // o servidor sempre renderiza o ramo anônimo, então a leitura só pode
-    // acontecer depois da montagem. É a exceção que a própria regra descreve:
-    // ler um sistema externo (document.cookie) indisponível no SSR. Uma
-    // gravação só, para não haver dois renders em sequência.
     useEffect(() => {
         const token = readAuthToken()
         const claims = token ? decodeJwtPayload(token) : null
@@ -72,14 +66,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
     }, [])
 
-    // O interceptor do axios não pode importar este contexto (ciclo), então o
-    // handler de 401 é injetado aqui.
     useEffect(() => {
         setUnauthorizedHandler(() => signOut('expired'))
     }, [signOut])
 
-    // A API não tem refresh: o token morre em 1h. Sem este alarme, quem
-    // estivesse preenchendo um formulário levaria um 401 opaco no envio.
     useEffect(() => {
         const token = readAuthToken()
         const claims = token ? decodeJwtPayload(token) : null
@@ -88,8 +78,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return
         }
 
-        // Token ja vencido agenda com 0 em vez de chamar signOut aqui: manter
-        // o setState fora do corpo do efeito evita render em cascata.
         const msLeft = Math.max(0, claims.exp * 1000 - Date.now())
         const timer = setTimeout(() => signOut('expired'), msLeft)
 

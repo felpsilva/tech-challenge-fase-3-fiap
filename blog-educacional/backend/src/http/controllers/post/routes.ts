@@ -13,9 +13,7 @@ import { authorizeRoles } from '@/http/middlewares/authorize-roles';
 export async function postRoutes(app: FastifyInstance) {
     app.post('/post', { preHandler: authorizeRoles(['admin', 'professor']) }, create)
 
-    // Leitura liberada: o blog precisa ser lido por quem nao tem conta. A lista
-    // de rotas publicas vive em `jwt-validate.ts` e precisa casar com estas.
-    // Rascunho continua escondido de anonimo — o filtro esta nos controllers.
+    // A lista de rotas publicas em `jwt-validate.ts` precisa casar com estas.
     app.get('/post', fetch)
     app.get('/post/search', search)
     app.get('/post/:id', get)

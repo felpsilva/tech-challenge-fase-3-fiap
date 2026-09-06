@@ -9,16 +9,8 @@ interface ServerGetOptions {
     tags?: string[]
 }
 
-/**
- * Busca para Server Components. Nunca lanca — devolve um resultado.
- *
- * O motivo e concreto: o `next build` pre-renderiza a home, ou seja, faz esta
- * chamada em tempo de BUILD. Dentro do `docker build` a API nao esta no ar, e
- * uma excecao aqui derrubaria a imagem inteira. Devolvendo `ok: false`, a
- * pagina mostra um estado vazio honesto e se recupera sozinha na primeira
- * revalidacao. A alternativa (`dynamic = 'force-dynamic'`) evitaria a chamada
- * no build, mas jogaria fora o cache da pagina mais acessada.
- */
+// Nunca lanca: o next build pre-renderiza a home e, dentro do docker build, a API
+// nao esta no ar — uma excecao aqui derrubaria a imagem inteira.
 export async function serverGet<T>(
     path: string,
     options: ServerGetOptions = {},

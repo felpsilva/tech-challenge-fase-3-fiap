@@ -16,7 +16,6 @@ import { createCategory, updateCategory } from '@/lib/api/category-service'
 import { from } from '@/styles/media'
 import type { Category } from '@/types/api'
 
-// Limites espelham varchar(255) das colunas.
 const schema = yup.object({
     name: yup
         .string()

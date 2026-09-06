@@ -23,7 +23,6 @@ export function PostCard({ post }: { post: PostCardData }) {
                 </Meta>
 
                 <Title>
-                    {/* O nome acessível do link é o título, não o resumo. */}
                     <TitleLink href={`/posts/${post.id}`} aria-label={`Ler post: ${post.title}`}>
                         {post.title}
                     </TitleLink>
@@ -92,16 +91,6 @@ const TitleLink = styled(Link)`
     }
 `
 
-/**
- * Duas linhas com reticências de verdade, em qualquer largura.
- *
- * Truncar por contagem de caracteres em JS daria duas linhas no notebook,
- * quatro no celular e uma e meia com fonte aumentada — "duas linhas" só o CSS
- * resolve, porque depende da largura renderizada e da fonte que carregou.
- *
- * O `min-height` reserva as duas linhas para os cartões da grade ficarem da
- * mesma altura mesmo quando o resumo ocupa uma linha só.
- */
 const Excerpt = styled.p`
     display: -webkit-box;
     -webkit-box-orient: vertical;

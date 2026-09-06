@@ -31,7 +31,6 @@ export function PostFormPage({ mode, postId }: PostFormPageProps) {
     const loader = useCallback(async (): Promise<FormData> => {
         const [categories, users, post] = await Promise.all([
             fetchCategories(),
-            // `GET /user` é restrito a admin: pedir como professor voltaria 403.
             isAdmin ? fetchUsers() : Promise.resolve<UserView[]>([]),
             postId ? fetchPost(postId) : Promise.resolve(null),
         ])

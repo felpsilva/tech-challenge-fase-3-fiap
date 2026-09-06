@@ -10,11 +10,6 @@ interface AsyncResource<T> {
     reload: () => void
 }
 
-/**
- * Carregamento das listagens administrativas. Elas são Client Components
- * porque as ações (excluir, trocar permissão) vivem ali, e o token está no
- * cookie legível pelo axios.
- */
 export function useAsyncResource<T>(loader: () => Promise<T>): AsyncResource<T> {
     const [data, setData] = useState<T | null>(null)
     const [error, setError] = useState<string | null>(null)
@@ -26,9 +21,6 @@ export function useAsyncResource<T>(loader: () => Promise<T>): AsyncResource<T> 
     useEffect(() => {
         let active = true
 
-        // Buscar dado e o caso legitimo de efeito (sincronizar com sistema
-        // externo). Os setState ficam dentro da funcao async para nao rodarem
-        // sincronamente no corpo do efeito e disparar render em cascata.
         const load = async () => {
             setIsLoading(true)
             setError(null)
@@ -55,7 +47,6 @@ export function useAsyncResource<T>(loader: () => Promise<T>): AsyncResource<T> 
         return () => {
             active = false
         }
-        // `loader` é recriado a cada render nos chamadores; o token é o gatilho.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [reloadToken])
 

@@ -40,7 +40,6 @@ export interface PostFormValues {
 interface PostFormProps {
     mode: 'create' | 'edit'
     categories: Category[]
-    /** Preenchido só para admin: professor publica sempre como ele mesmo. */
     users: UserView[]
     post?: Post
 }
@@ -69,9 +68,6 @@ export function PostForm({ mode, categories, users, post }: PostFormProps) {
         [post, user?.id],
     )
 
-    // O `id` vem das claims do JWT. Sem ele não há como montar `user_id`, e a
-    // rota que lista usuários é restrita a admin — então avisamos em vez de
-    // mandar uma requisição que o backend vai recusar.
     if (!user?.id) {
         return (
             <Feedback $tone="danger" role="alert">
@@ -99,8 +95,6 @@ export function PostForm({ mode, categories, users, post }: PostFormProps) {
                         slug: values.slug.trim(),
                         content: values.content.trim(),
                         status: values.status,
-                        // String vazia não pode ir: o Zod aceita e o banco
-                        // gravaria '', que depois parece uma URL válida.
                         ...(values.imageUrl.trim() ? { image_url: values.imageUrl.trim() } : {}),
                         categories: values.categoryIds.map((id) => ({ id })),
                     }
@@ -112,8 +106,6 @@ export function PostForm({ mode, categories, users, post }: PostFormProps) {
 
                         const postId = mode === 'create' ? saved.id : post!.id
 
-                        // A imagem é uma segunda requisição: não há transação
-                        // possível entre criar o post e enviar o arquivo.
                         try {
                             if (values.thumbnailFile) {
                                 setStage('uploading')
@@ -121,7 +113,6 @@ export function PostForm({ mode, categories, users, post }: PostFormProps) {
                             } else if (mode === 'edit' && thumbnailAction === 'remove') {
                                 setStage('uploading')
                                 await deletePostThumbnail(postId).catch((error: unknown) => {
-                                    // 404 aqui é sucesso: já não havia imagem.
                                     if (isApiError(error) && error.status === 404) {
                                         return
                                     }
@@ -129,9 +120,6 @@ export function PostForm({ mode, categories, users, post }: PostFormProps) {
                                 })
                             }
                         } catch (imageError) {
-                            // O post já existe. Apagar seria pior — sumiria com
-                            // o texto que a pessoa escreveu. Levamos para a
-                            // edição, onde dá para tentar de novo num clique.
                             const reason = isApiError(imageError)
                                 ? imageError.message
                                 : 'erro ao enviar a imagem'
@@ -299,8 +287,6 @@ function PostFormFields({
                                     ))}
                                 </Select>
                             ) : (
-                                /* Professor publica sempre como ele mesmo: o campo
-                                   aparece, mas travado. O `user_id` vem do token. */
                                 <TextInput
                                     {...fieldProps}
                                     name="authorDisplay"
@@ -338,8 +324,6 @@ function PostFormFields({
                             Nenhuma categoria cadastrada ainda.
                         </EmptyCategories>
                     ) : (
-                        /* Checkbox em vez de <select multiple>: multi-select é
-                           notoriamente ruim de operar por teclado e no celular. */
                         <CheckboxList>
                             {categories.map((category) => {
                                 const checked = values.categoryIds.includes(category.id)

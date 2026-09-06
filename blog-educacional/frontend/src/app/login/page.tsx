@@ -20,7 +20,6 @@ export default function LoginPage() {
                 </div>
             </PageHeader>
 
-            {/* `useSearchParams` exige limite de Suspense numa página estática. */}
             <Suspense fallback={<p>Carregando…</p>}>
                 <LoginForm />
             </Suspense>

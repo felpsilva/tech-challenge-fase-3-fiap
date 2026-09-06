@@ -25,10 +25,7 @@ export class UserRepository implements IUserRepository {
         return await this.repository.findOne({ where: { id } })
     }
 
-    /**
-     * Unico ponto que traz o hash da senha: o signin precisa dele para o
-     * compare do bcrypt. Qualquer outra leitura de usuario vem sem a coluna.
-     */
+    // Unico ponto que traz o hash da senha: o signin precisa dele para o bcrypt.
     async findByUsername(username: string): Promise<IUser | null> {
         return await this.repository
             .createQueryBuilder('user')

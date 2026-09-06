@@ -7,7 +7,6 @@ function Wrapper({ children }: { children: ReactNode }) {
     return <ThemeProvider theme={theme}>{children}</ThemeProvider>
 }
 
-/** Todo componente estilizado precisa do tema no contexto para renderizar. */
 export function renderWithTheme(ui: ReactElement) {
     return render(ui, { wrapper: Wrapper })
 }

@@ -1,8 +1,5 @@
-/**
- * Tipos de imagem aceitos como thumbnail e sua assinatura binária.
- * A validação é feita pelo conteúdo, não pelo content-type declarado no
- * multipart — o cliente controla o header, mas não os primeiros bytes.
- */
+// A validacao e feita pelo conteudo, nao pelo content-type do multipart: o cliente
+// controla o header, mas nao os primeiros bytes.
 const IMAGE_SIGNATURES = [
     {
         mime: 'image/jpeg',
@@ -26,17 +23,14 @@ const IMAGE_SIGNATURES = [
 
 export const ACCEPTED_IMAGE_MIME_TYPES = IMAGE_SIGNATURES.map((signature) => signature.mime)
 
-/** Limite por arquivo. Serve de guarda contra inchar o storage do Neon. */
 export const MAX_THUMBNAIL_SIZE_BYTES = 2 * 1024 * 1024
 
-/** Devolve o MIME real do buffer, ou null se não for uma imagem suportada. */
 export function detectImageMimeType(buffer: Buffer): string | null {
     const signature = IMAGE_SIGNATURES.find((item) => item.matches(buffer))
 
     return signature ? signature.mime : null
 }
 
-/** Remove diretórios e caracteres de path do nome enviado pelo cliente. */
 export function sanitizeFilename(filename: string): string {
     const base = filename.split(/[\\/]/).pop() ?? 'thumbnail'
     const cleaned = base.replace(/[^\w.\-\s]/g, '').trim()

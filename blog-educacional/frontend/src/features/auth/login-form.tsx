@@ -56,7 +56,6 @@ export function LoginForm() {
                         router.replace(nextPath ?? '/admin/posts')
                         router.refresh()
                     } catch (error) {
-                        // `fieldErrors` do Zod alimenta o Formik direto.
                         if (isApiError(error) && Object.keys(error.fieldErrors).length > 0) {
                             helpers.setErrors(error.fieldErrors)
                         }

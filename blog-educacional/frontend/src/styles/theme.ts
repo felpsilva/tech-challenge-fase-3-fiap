@@ -1,8 +1,3 @@
-/**
- * Tokens de design. Os pares de cor de texto foram checados contra
- * `surface` (#FFFFFF) e `surfaceAlt` (#F5F7FA) para ficarem acima de 4.5:1 —
- * mexer nos valores exige checar o contraste de novo.
- */
 export const theme = {
     colors: {
         brand: '#1B4F9C',
@@ -25,7 +20,6 @@ export const theme = {
         dangerHover: '#8F1D17',
         dangerSubtle: '#FBEAE9',
     },
-    // Escala de 4px: spacing(3) === '12px'.
     spacing: (steps: number) => `${steps * 4}px`,
     radii: { sm: '4px', md: '8px', lg: '16px', pill: '999px' },
     shadows: {

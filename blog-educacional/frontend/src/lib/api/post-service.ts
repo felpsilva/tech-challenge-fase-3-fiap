@@ -50,7 +50,6 @@ export async function deletePost(id: number) {
 
 export async function uploadPostThumbnail(id: number, file: File) {
     const form = new FormData()
-    // O nome do campo e `file`: e o que o README e o teste do backend usam.
     form.append('file', file)
 
     const response = await httpClient.post<ThumbnailMetadata>(`/post/${id}/thumbnail`, form)
@@ -62,14 +61,8 @@ export async function deletePostThumbnail(id: number) {
     await httpClient.delete(`/post/${id}/thumbnail`)
 }
 
-/**
- * A imagem nao tem URL no JSON: a rota do backend *e* a URL. Sempre a base
- * publica, porque o valor vai para um `<img src>` resolvido pelo navegador,
- * mesmo quando a tag foi renderizada no servidor.
- *
- * O `version` existe porque um novo upload troca os bytes na mesma URL — sem
- * isso o navegador serve a imagem antiga do cache.
- */
+// O `version` existe porque um novo upload troca os bytes na mesma URL: sem ele o
+// navegador serve a imagem antiga do cache.
 export function buildThumbnailUrl(id: number, version?: string | number) {
     const base = `${resolvePublicApiBaseUrl()}/post/${id}/thumbnail`
 

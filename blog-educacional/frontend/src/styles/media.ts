@@ -2,11 +2,9 @@ import { theme } from './theme'
 
 type Breakpoint = keyof typeof theme.breakpoints
 
-/** Mobile-first: o estilo base e o do celular, `from` adiciona o do desktop. */
 export const from = (breakpoint: Breakpoint) =>
     `@media (min-width: ${theme.breakpoints[breakpoint]})`
 
-/** Usado so onde a versao desktop e a semanticamente mais rica (tabelas). */
 export const upTo = (breakpoint: Breakpoint) =>
     `@media (max-width: calc(${theme.breakpoints[breakpoint]} - 1px))`
 

@@ -2,8 +2,6 @@ import { z } from 'zod';
 
 import { loadEnvFiles } from './load-env-files';
 
-// Precisa rodar antes do parse: e o que traz o `.env` da raiz para o
-// `process.env`.
 loadEnvFiles();
 
 const envSchema = z.object({
@@ -16,8 +14,6 @@ const envSchema = z.object({
     DB_PORT: z.coerce.number(),
     DB_NAME: z.string(),
     JWT_SECRET: z.string(),
-    // Origem liberada no CORS. Aceita uma lista separada por virgula para
-    // cobrir dev e o dominio publicado ao mesmo tempo.
     CORS_ORIGIN: z.string().default('http://localhost:3000'),
 })
 

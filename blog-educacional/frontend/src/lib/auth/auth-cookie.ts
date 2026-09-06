@@ -2,22 +2,8 @@ import { decodeJwtPayload } from './decode-jwt'
 
 export const AUTH_COOKIE_NAME = 'blog_token'
 
-/**
- * Cookie legivel por JavaScript, e nao `httpOnly` — decisao consciente.
- *
- * `httpOnly` so protege de verdade se o token nunca entrar no JS, o que
- * exigiria proxiar toda chamada autenticada pelo servidor do Next (o BFF que
- * foi descartado). Sem esse proxy, o axios precisa ler o valor, o que
- * demandaria um endpoint que devolve o token — e aí qualquer script injetado
- * simplesmente chama esse endpoint. Ficaria a mesma superficie de ataque com
- * mais peça móvel.
- *
- * Contra `localStorage`, o cookie ganha em tres pontos: o `proxy.ts` consegue
- * ler no servidor, o `Max-Age` derivado do `exp` faz o navegador ser o
- * cronometro da sessao (nao ha refresh na API), e nao ha risco de CSRF porque
- * o token vai num header montado a mao, nunca como credencial ambiente — o
- * backend nem le cookie.
- */
+// Legivel por JavaScript de proposito: sem um BFF, o axios precisa ler o token.
+// Nao ha risco de CSRF — o token vai num header montado a mao, o backend nao le cookie.
 export function readAuthToken(): string | null {
     if (typeof document === 'undefined') {
         return null

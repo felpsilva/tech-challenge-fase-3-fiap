@@ -1,7 +1,3 @@
-/**
- * Monta um corpo multipart/form-data para uso com app.inject, evitando
- * uma dependência extra só para os testes de upload.
- */
 export const MULTIPART_BOUNDARY = '----BlogEducacionalTestBoundary'
 
 export const multipartHeaders = {
@@ -35,7 +31,6 @@ export function buildFieldPayload(name: string, value: string): Buffer {
     )
 }
 
-/** Bytes que passam pela checagem de magic number de cada formato. */
 export const PNG_BYTES = Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     Buffer.from('conteudo-fake-png'),

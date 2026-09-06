@@ -5,16 +5,10 @@
  *
  * @jest-environment node
  */
-// Sem `import` no topo, o TS trataria o arquivo como script global e
-// `PRODUCTION_URL` colidiria entre os dois testes.
 export {}
 
 const PRODUCTION_URL = 'https://blog-educacional-backend-1.onrender.com'
 
-/**
- * `api-url` le `process.env` na chamada, mas o modulo e reimportado a cada
- * caso para nao depender de ordem entre os testes.
- */
 async function importApiUrl() {
     return import('./api-url')
 }
@@ -56,8 +50,6 @@ describe('resolveApiBaseUrl (servidor)', () => {
     })
 
     it('remove a barra final da URL de producao', async () => {
-        // A URL do Render e divulgada com barra no fim. Sem cortar, `/post`
-        // viraria `//post` e o Fastify responderia 404.
         process.env.API_URL = `${PRODUCTION_URL}/`
 
         const { resolveApiBaseUrl } = await importApiUrl()

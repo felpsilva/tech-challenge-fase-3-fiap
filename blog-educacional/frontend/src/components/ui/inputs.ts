@@ -2,7 +2,6 @@
 
 import styled, { css } from 'styled-components'
 
-/** Base compartilhada pelos controles: 44px de alvo minimo para toque. */
 const controlBase = css`
     width: 100%;
     min-height: 44px;

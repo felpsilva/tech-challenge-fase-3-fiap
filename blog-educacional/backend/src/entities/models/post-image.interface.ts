@@ -8,5 +8,4 @@ export interface IPostImage {
     updated_at?: Date
 }
 
-/** Metadados da thumbnail, sem o binário — é o que as rotas JSON devolvem. */
 export type IPostImageMetadata = Omit<IPostImage, 'data'>

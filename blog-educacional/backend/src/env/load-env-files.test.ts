@@ -4,13 +4,6 @@ import { resolve } from 'node:path'
 
 import { loadEnvFiles, resolveEnvFiles } from './load-env-files'
 
-/**
- * Monta um repositorio de mentira com a mesma forma do real:
- *
- *   <raiz>/.git
- *   <raiz>/.env
- *   <raiz>/blog-educacional/backend/   <- cwd do backend
- */
 function createFakeRepo() {
     const root = mkdtempSync(resolve(tmpdir(), 'env-files-'))
     const packageDir = resolve(root, 'blog-educacional', 'backend')
@@ -59,8 +52,6 @@ describe('resolveEnvFiles', () => {
     })
 
     it('para no diretorio com .git e nao le o .env de fora do repositorio', () => {
-        // Um `.env` acima da raiz do repositorio — o home do usuario, na
-        // pratica. Nao pode entrar na configuracao do projeto.
         writeFileSync(resolve(repo.root, '..', '.env'), 'DB_HOST=vazado\n')
         writeFileSync(resolve(repo.root, '.env'), 'DB_HOST=raiz\n')
 
@@ -107,8 +98,6 @@ describe('loadEnvFiles', () => {
     })
 
     it('nao sobrescreve variavel ja definida no ambiente', () => {
-        // E o que permite ao compose, ao CI e ao painel do Render mandarem
-        // mais alto que o arquivo versionado.
         process.env.ENV_FILES_TEST_PRESET = 'do-ambiente'
         writeFileSync(resolve(repo.root, '.env'), 'ENV_FILES_TEST_PRESET=do-arquivo\n')
 

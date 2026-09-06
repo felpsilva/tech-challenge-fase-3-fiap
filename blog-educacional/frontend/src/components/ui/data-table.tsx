@@ -3,16 +3,6 @@
 import styled from 'styled-components'
 import { upTo, visuallyHiddenCss } from '@/styles/media'
 
-/**
- * Tabela que vira cartao abaixo de 768px.
- *
- * Os `role` estao escritos a mao de proposito: trocar o `display` de
- * <table>/<tr>/<td> destroi a semantica implicita de tabela em todos os
- * navegadores. Com os papeis declarados, o colapso e so visual.
- *
- * Uso: cada <td> leva `data-label` com o nome da coluna, que o ::before
- * mostra no layout de cartao.
- */
 export const Table = styled.table`
     width: 100%;
     border-collapse: collapse;
@@ -76,8 +66,6 @@ export const Table = styled.table`
 `
 
 export const TableWrapper = styled.div`
-    /* Enquanto a tabela e tabela (>=768px), conteudo largo rola aqui dentro
-       em vez de fazer a pagina rolar de lado. */
     overflow-x: auto;
 `
 

@@ -79,9 +79,6 @@ describe('POST /post', () => {
         mockMakeDeletePostUseCase = mockedDeleteModule.makeDeletePostUseCase as jest.Mock
 
         const testApp = await createAuthenticatedTestApp(async (appInstance) => {
-            // Espelha `post/routes.ts`: leitura publica, escrita protegida, e
-            // `/post/search` antes de `/post/:id` para o roteador nao mandar
-            // "search" para o handler de id.
             appInstance.post('/post', { preHandler: authorizeRoles(['admin', 'professor']) }, create)
             appInstance.get('/post', fetch)
             appInstance.get('/post/search', search)
@@ -288,10 +285,6 @@ describe('POST /post', () => {
         expect(mockMakeDeletePostUseCase).toHaveBeenCalledTimes(1)
         expect(mockDeleteHandler).toHaveBeenCalledWith(1)
     })
-    // ---------------------------------------------------------------------
-    // Leitura publica: o blog precisa abrir sem login. O que muda para quem
-    // nao tem token e a visibilidade do rascunho, nao o acesso a rota.
-    // ---------------------------------------------------------------------
 
     const publishedPost = {
         id: 1,
@@ -356,7 +349,6 @@ describe('POST /post', () => {
 
         const response = await app.inject({ method: 'GET', url: '/post/2' })
 
-        // 404 e nao 403 de proposito: um 403 confirmaria que o post existe.
         expect(response.statusCode).toBe(404)
         expect(response.json()).toEqual({ message: 'Post not found' })
     })
@@ -405,11 +397,6 @@ describe('POST /post', () => {
         expect(mockDeleteHandler).not.toHaveBeenCalled()
     })
 
-    // ---------------------------------------------------------------------
-    // Categorias no update. Antes disto o Zod descartava a chave e a
-    // categoria de um post era imutavel depois de criado.
-    // ---------------------------------------------------------------------
-
     it('updates the post categories', async () => {
         mockUpdateHandler.mockResolvedValueOnce({ ...publishedPost, categories: [{ id: 2 }] })
 
@@ -435,7 +422,6 @@ describe('POST /post', () => {
         })
 
         expect(response.statusCode).toBe(200)
-        // A chave nao pode aparecer: ausente significa "nao mexe".
         expect(mockUpdateHandler).toHaveBeenCalledWith(1, { title: 'Só o título' })
     })
 
