@@ -4,7 +4,22 @@ Aplicação de blog educacional composta por **API (Fastify + TypeORM)** e
 **interface web (Next.js 16 + React 19)**, com **PostgreSQL no Neon (remoto)**,
 orquestrada com Docker Compose.
 
-## Arquitetura — separação de containers
+A documentação está dividida em duas partes independentes. Quem for mexer só em
+um dos lados pode ler a visão geral e pular direto para a parte que interessa:
+
+- **[Parte 1 — Backend](#parte-1--backend)** · API Fastify, banco, autenticação,
+  rotas e deploy da API.
+- **[Parte 2 — Frontend](#parte-2--frontend)** · Next.js App Router, páginas,
+  configuração das URLs, decisões de interface e deploy do site.
+
+A [Visão geral](#visão-geral) abaixo cobre só o que é comum aos dois: containers,
+mecânica do `.env` compartilhado e como subir tudo de uma vez.
+
+---
+
+## Visão geral
+
+### Arquitetura — separação de containers
 
 O projeto usa **3 containers**, cada um com uma responsabilidade única:
 
@@ -14,7 +29,7 @@ O projeto usa **3 containers**, cada um com uma responsabilidade única:
 | `backend`   | build `./backend`   | API REST — regras de negócio e acesso ao Neon                 | 3001         |
 | `frontend`  | build `./frontend`  | Interface web (Next.js App Router)                            | 3000         |
 
-### Por que essa separação faz sentido neste contexto?
+#### Por que essa separação faz sentido neste contexto?
 
 - **Banco gerenciado no Neon.** Não há container local de banco para manter.
 - **Bootstrap automático.** O container `neon-init` aplica `db/init.sql` antes
@@ -23,7 +38,9 @@ O projeto usa **3 containers**, cada um com uma responsabilidade única:
   proxy no meio. O preço dessa escolha é explícito: o CORS passa a ser
   configuração obrigatória do backend (`CORS_ORIGIN`) e o frontend precisa de
   duas URLs da API — uma para o navegador, outra para o próprio servidor do
-  Next dentro da rede do compose. Veja [Frontend](#frontend).
+  Next dentro da rede do compose. Veja
+  [As duas URLs da API](#as-duas-urls-da-api).
+
 ```
 ┌────────────┐       ┌────────────┐       ┌────────────┐
 │ neon-init  │─────> │  backend   │ <──── │  frontend  │
@@ -33,7 +50,23 @@ O projeto usa **3 containers**, cada um com uma responsabilidade única:
          └──────> Neon PostgreSQL remoto
 ```
 
-## Configuração (`.env` na raiz)
+### Como subir a aplicação
+
+Pré-requisito: Docker + Docker Compose.
+
+```bash
+docker compose up --build
+```
+
+Acesse:
+
+- **Interface:** http://localhost:3000
+- **API:** http://localhost:3001
+
+Para rodar em segundo plano: `docker compose up --build -d`
+Para derrubar: `docker compose down`.
+
+### Configuração (`.env` na raiz)
 
 Backend e frontend leem **o mesmo** arquivo, versionado na raiz do repositório:
 
@@ -59,54 +92,107 @@ Precedência, do mais forte para o mais fraco:
 arquivo nenhum, e o painel do Render continua sendo a fonte dos segredos de
 produção.
 
-Duas ressalvas:
+Quais variáveis cada lado consome está documentado na parte respectiva:
+[backend](#configuração-do-backend) e [frontend](#as-duas-urls-da-api). O modelo
+completo está em `.env.example`.
 
-- **A imagem do backend é construída a partir da raiz do repositório**, não de
-  `./backend`, justamente para conseguir copiar o `.env` compartilhado para
-  dentro dela (`COPY .env* ./` no Dockerfile). É o que permite ao serviço no
-  Render subir sem nenhuma variável configurada no painel. Continua sendo
-  fallback: variável definida no painel vence o arquivo embutido.
-- **A imagem do frontend não recebe o `.env` da raiz.** O contexto dela é
-  `./frontend`, e a saída `standalone` do Next nem carregaria o
-  `next.config.ts` em runtime. Ali a configuração chega pelo
-  `ARG NEXT_PUBLIC_API_URL` (build) e pelo `environment` do compose (runtime).
 O `.env` é versionado por decisão do projeto (trabalho acadêmico, avaliador
 precisa subir sem configurar nada). Em um projeto real as credenciais do banco
 e o `JWT_SECRET` não deveriam estar aqui.
 
-## Como subir a aplicação
+### Estrutura do repositório
 
-Pré-requisito: Docker + Docker Compose.
-
-```bash
-docker compose up --build
+```
+.
+├── .env, .env.production, .env.example   # configuração compartilhada
+├── package.json                          # scripts que delegam para os pacotes
+└── blog-educacional/
+    ├── docker-compose.yml                # orquestra neon-init + backend + frontend
+    ├── db/init.sql                       # schema + seed
+    ├── backend/                          # API Fastify + TypeORM (Dockerfile single-stage)
+    └── frontend/                         # Next.js 16 App Router (Dockerfile multi-stage)
 ```
 
-Acesse:
+### Testes
 
-- **Interface:** http://localhost:3000
-- **API:** http://localhost:3001
+Da raiz:
 
-Para rodar em segundo plano: `docker compose up --build -d`
-Para derrubar: `docker compose down`.
+```bash
+npm test          # roda as duas suítes
+npm run test:back # jest --runInBand no backend
+npm run test:front
+```
 
-## Produção
+Backend e frontend usam **Jest**, mas com configurações distintas — o detalhe de
+cada suíte está em [Testes do backend](#testes-do-backend) e
+[Testes do frontend](#testes-do-frontend).
 
-A API também está publicada em produção no Render, consumindo a imagem do backend
-publicada no Docker Hub.
-- **URL da imagem do backend no Docker Hub:** https://hub.docker.com/repository/docker/fpsilva777/blog-educacional-backend/tags
-- A imagem do frontend é publicada como `<usuário>/blog-educacional-frontend`
-  pelo mesmo workflow, já apontando para a URL do Render. Dá para sobrescrever
-  pela variável de repositório `NEXT_PUBLIC_API_URL` no GitHub (em **vars**,
-  não em secrets: é URL pública, e um secret mascarado em log tornaria uma
-  configuração errada indepurável).
-- Depois de publicar o frontend, ajuste `CORS_ORIGIN` no serviço do backend no
-  Render para a origem dele.
+### Publicação das imagens
 
-- **URL da API em produção:** https://blog-educacional-backend-1.onrender.com/
+O workflow em `.github/workflows/main.yml` publica as duas imagens no Docker Hub
+(`<usuário>/blog-educacional-backend` e `<usuário>/blog-educacional-frontend`).
+O que muda entre as duas — e o que precisa ser ajustado depois de publicar — está
+em [Backend em produção](#backend-em-produção) e
+[Frontend em produção](#frontend-em-produção).
 
-Sobre atualizações em produção: o deploy é feito no github, o workflow encaminha para a imagem do Docker Hub, e o Render puxa a imagem,
-porém, o Render não atualiza automaticamente a imagem, então é necessário ir no painel do Render e clicar em "Manual Deploy" para atualizar a imagem.
+---
+
+# Parte 1 — Backend
+
+API REST em **Fastify 5** com **TypeORM** sobre PostgreSQL (Neon), escrita em
+TypeScript e executada direto por `tsx` (sem etapa de build). Validação de
+configuração com **zod**, autenticação com **@fastify/jwt**, upload com
+**@fastify/multipart** e hash de senha com **bcryptjs**.
+
+Diretório: `blog-educacional/backend/`.
+
+## Como rodar o backend
+
+Com Docker (junto com o resto): veja [Como subir a aplicação](#como-subir-a-aplicação).
+
+Direto, sem container — a partir da raiz do repositório:
+
+```bash
+npm --prefix blog-educacional/backend ci
+npm run start        # tsx src/server.ts
+npm run start:dev    # tsx watch
+```
+
+O servidor só abre a porta depois do `DataSource` do TypeORM inicializar, para
+não aceitar requisição antes do banco estar pronto.
+
+## Configuração do backend
+
+Variáveis lidas do `.env` da raiz e validadas por zod em `src/env/index.ts` — se
+faltar alguma obrigatória, o processo **não sobe**:
+
+| Variável | Obrigatória | Padrão | Papel |
+| --- | --- | --- | --- |
+| `NODE_ENV` | não | `development` | seleciona o `.env.<NODE_ENV>` complementar |
+| `PORT` | não | `3001` | porta HTTP |
+| `DATABASE_URL` | não | — | string de conexão completa (usada pelo `neon-init`) |
+| `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_NAME` | **sim** | — | conexão do TypeORM |
+| `JWT_SECRET` | **sim** | — | assinatura do token |
+| `CORS_ORIGIN` | não | `http://localhost:3000` | origens liberadas, separadas por vírgula |
+
+**A imagem do backend é construída a partir da raiz do repositório**, não de
+`./backend`, justamente para conseguir copiar o `.env` compartilhado para dentro
+dela (`COPY .env* ./` no Dockerfile). É o que permite ao serviço no Render subir
+sem nenhuma variável configurada no painel. Continua sendo fallback: variável
+definida no painel vence o arquivo embutido.
+
+## Banco de dados e seed
+
+Não há migrations: todo o schema vive em `db/init.sql`, aplicado de forma
+idempotente pelo container `neon-init` a cada subida (`IF NOT EXISTS` e
+`ON CONFLICT`). Coluna ou tabela nova precisa entrar lá com `IF NOT EXISTS`,
+senão o `ON_ERROR_STOP=1` derruba o bootstrap na segunda execução.
+
+O seed cria o usuário de demonstração:
+
+- Usuário: **admin** · senha: **admin123** (permissão `admin`)
+
+Para reaplicar o bootstrap: `docker compose up --build`.
 
 ## Guia de uso da API
 
@@ -136,6 +222,11 @@ O backend só aceita requisições de navegador vindas das origens listadas em
 Em produção, essa variável precisa apontar para a origem do frontend publicado
 — caso contrário o navegador barra todas as chamadas.
 
+Dois ajustes explícitos no plugin, ambos com motivo: os métodos são ampliados
+além do padrão `GET,HEAD,POST` (senão o preflight de `PUT`/`DELETE` é recusado)
+e o `Content-Disposition` é exposto (não é safelisted; sem expor, o navegador
+não lê o filename da thumbnail).
+
 ### Perfis de acesso
 
 - **visitante anônimo** (sem token): lê os posts **publicados** e as imagens deles.
@@ -143,20 +234,28 @@ Em produção, essa variável precisa apontar para a origem do frontend publicad
 - `professor`: pode criar, listar, atualizar e remover categorias e posts.
 - `admin`: acesso administrativo completo, incluindo a gestão de usuários.
 
-### Rotas principais
+### Rotas
 
-- `POST /user/signin`: autentica e retorna o token JWT.
-- `POST /user`: cria usuário novo, restrito a `admin`.
-- `POST /category`: cria categoria, restrito a `admin` e `professor`.
-- `POST /post`: cria publicação, restrito a `admin` e `professor`.
-- `GET /post`, `GET /post/search?q=` e `GET /post/:id`: consulta posts, **público**.
-- `PUT /post/:id`: atualiza a publicação, restrito a `admin` e `professor`. Aceita
-  `categories`, o que permite trocar a categoria de um post já criado.
-- `GET /category`, `GET /category/:id`, `PUT` e `DELETE` das categorias: restrito a `admin` e `professor`.
-- `POST /post/:id/thumbnail`: envia o arquivo de imagem da thumbnail (`multipart/form-data`), restrito a `admin` e `professor`.
-- `GET /post/:id/thumbnail`: devolve o arquivo da thumbnail, **público** — uma tag
-  `<img>` do navegador não envia header `Authorization`.
-- `DELETE /post/:id/thumbnail`: remove a thumbnail do post, restrito a `admin` e `professor`.
+| Método e rota | Acesso |
+| --- | --- |
+| `POST /user/signin` | público — autentica e retorna o token JWT |
+| `POST /user` | `admin` |
+| `GET /user` · `GET /user/:id` | `admin` |
+| `PUT /user/:id` · `DELETE /user/:id` | `admin` |
+| `POST /category` | `admin`, `professor` |
+| `GET /category` · `GET /category/:id` | `admin`, `professor` |
+| `PUT /category/:id` · `DELETE /category/:id` | `admin`, `professor` |
+| `POST /post` | `admin`, `professor` |
+| `GET /post` · `GET /post/search?q=` · `GET /post/:id` | **público** |
+| `PUT /post/:id` | `admin`, `professor` — aceita `categories`, o que permite trocar a categoria de um post já criado |
+| `DELETE /post/:id` | `admin`, `professor` |
+| `POST /post/:id/thumbnail` | `admin`, `professor` — `multipart/form-data` |
+| `GET /post/:id/thumbnail` | **público** — uma tag `<img>` do navegador não envia header `Authorization` |
+| `DELETE /post/:id/thumbnail` | `admin`, `professor` |
+
+A lista de rotas públicas está declarada em `src/http/middlewares/jwt-validate.ts`
+e precisa ser mantida em sincronia com o registro das rotas em
+`src/http/controllers/post/routes.ts`.
 
 #### O que "público" significa aqui
 
@@ -165,6 +264,10 @@ publicado**: sem um token válido, `GET /post` e `GET /post/search` devolvem só
 os itens com `status: 'published'`, e `GET /post/:id` de um rascunho responde
 `404` (e não `403`, que já confirmaria a existência do post). Com token, o
 autor continua vendo os próprios rascunhos.
+
+O middleware faz *soft verify* nessas rotas: token válido é aproveitado (o
+controller usa `request.user` para decidir se mostra rascunho), token ausente ou
+expirado não bloqueia.
 
 Duas consequências que ficam registradas por honestidade, não escondidas:
 
@@ -316,12 +419,99 @@ curl http://localhost:3001/post/1/thumbnail \
   -o capa.png
 ```
 
-## Frontend
+## Mapa do código (backend)
+
+```
+src/
+├── server.ts                 sobe o Fastify depois de inicializar o DataSource
+├── app.ts                    plugins (cors, jwt, multipart), hook de auth, rotas
+├── env/                      carregamento do .env da raiz + validação zod
+├── entities/                 entidades TypeORM (user, post, category, post-image)
+│   └── models/               interfaces dos modelos
+├── repositories/             interfaces + implementações TypeORM
+├── use-cases/                regras de negócio, uma por arquivo
+│   ├── errors/               erros de domínio (not found, credenciais, imagem)
+│   └── factory/              fábricas que injetam os repositórios nos use cases
+├── http/
+│   ├── controllers/          um diretório por recurso, com `routes.ts` próprio
+│   └── middlewares/          jwt-validate (rotas públicas) e authorize-roles
+├── lib/typeorm/              DataSource
+├── utils/                    validação de imagem, status de post, error handler
+└── test/                     setup do Jest e helpers (app autenticado, multipart)
+```
+
+Fluxo de uma requisição: `routes.ts` → `authorize-roles` → controller (valida o
+corpo com zod) → factory → use case → repositório → TypeORM. Erros de domínio
+sobem até o `global-error-handler`, que faz a tradução para o status HTTP.
+
+## Testes do backend
+
+```bash
+npm run test:back   # da raiz — equivale a `jest --runInBand`
+```
+
+O `--runInBand` não é enfeite: as suítes de rota tocam o mesmo banco remoto, e
+rodar em paralelo produziria interferência entre elas. Os helpers em
+`src/test/helpers/` montam um app já autenticado e o corpo multipart do upload.
+
+## Backend em produção
+
+A API está publicada no Render, consumindo a imagem do backend publicada no
+Docker Hub.
+
+- **Imagem no Docker Hub:** https://hub.docker.com/repository/docker/fpsilva777/blog-educacional-backend/tags
+- **URL da API em produção:** https://blog-educacional-backend-1.onrender.com/
+
+O deploy é feito no GitHub, o workflow publica a imagem no Docker Hub, e o
+Render puxa a imagem — porém o Render **não atualiza automaticamente**: é
+preciso ir ao painel e clicar em "Manual Deploy".
+
+Depois de publicar o frontend, ajuste `CORS_ORIGIN` no serviço do backend no
+Render para a origem dele.
+
+## Observações técnicas do backend
+
+- O backend roda o TypeScript diretamente via `tsx` (sem etapa de build), e por
+  isso seu Dockerfile é single-stage — diferente do frontend, que compila. A
+  assimetria entre os dois Dockerfiles é intencional.
+- Uploads vão para o banco, não para o disco: o container não tem volume e a
+  imagem é recriada a cada deploy, então qualquer arquivo salvo no filesystem se
+  perderia.
+- O hash de senha nunca sai do banco: a coluna `password` da entidade `User`
+  tem `select: false`, então nenhuma consulta o traz por engano — nem quando o
+  usuário é carregado como relação (o autor em `GET /post`). O único ponto que
+  pede a coluna explicitamente é o `findByUsername`, usado pelo `signin` para
+  comparar o hash com o bcrypt.
+
+---
+
+# Parte 2 — Frontend
 
 Interface em **Next.js 16 (App Router)** com **React 19**, **styled-components**,
 **Formik + Yup** nos formulários e **axios** nas chamadas à API.
 
-### Páginas
+Diretório: `blog-educacional/frontend/` — que tem um
+[README próprio](blog-educacional/frontend/README.md) com o checklist detalhado
+de acessibilidade.
+
+## Como rodar o frontend
+
+Com Docker (junto com o resto): veja [Como subir a aplicação](#como-subir-a-aplicação).
+
+Direto, a partir da raiz do repositório (a API precisa estar no ar):
+
+```bash
+npm run dev:front      # desenvolvimento em http://localhost:3000
+npm run build:front
+npm run start:front
+npm run test:front
+npm run lint:front
+```
+
+Dentro de `blog-educacional/frontend/` os scripts equivalentes são `npm run dev`,
+`npm run build`, `npm start`, `npm test`, `npm run lint` e `npm run type-check`.
+
+## Páginas
 
 | Rota | O que faz | Acesso |
 | --- | --- | --- |
@@ -334,7 +524,7 @@ Interface em **Next.js 16 (App Router)** com **React 19**, **styled-components**
 | `/admin/categories/new` · `/admin/categories/[id]/edit` | Criação e edição de categoria | professor, admin |
 | `/admin/users` | Gestão de permissões e exclusão de usuários | **admin** |
 
-### As duas URLs da API
+## As duas URLs da API
 
 Esta é a configuração que mais dá problema, então vale a explicação:
 
@@ -342,11 +532,6 @@ Esta é a configuração que mais dá problema, então vale a explicação:
 | --- | --- | --- | --- |
 | `NEXT_PUBLIC_API_URL` | o **navegador** (axios e o `<img>` da thumbnail) | `http://localhost:3001` | `https://blog-educacional-backend-1.onrender.com` |
 | `API_URL` | o **servidor** do Next (Server Components) | `http://backend:3001` | `https://blog-educacional-backend-1.onrender.com` |
-
-Os valores de produção vêm do `.env.production` da raiz. No build da imagem
-Docker eles não chegam (o contexto é `./frontend`), então o workflow passa a
-URL como `build-args` — com a mesma URL como padrão, caso a variável de
-repositório `NEXT_PUBLIC_API_URL` não esteja definida.
 
 Uma variável só não atende os dois: dentro do compose o servidor do Next
 alcança a API pelo DNS interno, mas o navegador do usuário só alcança a porta
@@ -359,7 +544,13 @@ Detalhe importante do `NEXT_PUBLIC_*`: ele é embutido no bundle em tempo de
 `build-args` no workflow — trocar o host da API em produção exige rebuild da
 imagem, não só mudar variável de ambiente.
 
-### Decisões que valem registro
+**A imagem do frontend não recebe o `.env` da raiz.** O contexto dela é
+`./frontend`, e a saída `standalone` do Next nem carregaria o `next.config.ts`
+em runtime. Ali a configuração chega pelo `ARG NEXT_PUBLIC_API_URL` (build) e
+pelo `environment` do compose (runtime). Os valores de produção vêm do
+`.env.production` da raiz, repassados pelo workflow como `build-args`.
+
+## Decisões que valem registro
 
 - **Sessão em cookie legível por JavaScript, não `httpOnly`.** Sem uma camada
   de proxy no servidor, o axios precisa ler o token para montar o header
@@ -388,75 +579,63 @@ imagem, não só mudar variável de ambiente.
 - **Resumo de duas linhas por CSS (`line-clamp`), não por corte de string.**
   "Duas linhas" depende da largura renderizada e da fonte carregada: cortar por
   contagem de caracteres daria duas linhas no desktop e quatro no celular.
+- **A home é pré-renderizada com revalidação de 60s.** A busca no servidor
+  tolera a API fora do ar em vez de lançar: sem isso, o `docker build` do
+  frontend quebraria, já que o `next build` pré-renderiza a home e a API não
+  está de pé durante o build. Nesse caso a página mostra um aviso e se recupera
+  sozinha na primeira revalidação.
 
-### Comandos
+## Mapa do código (frontend)
+
+```
+src/
+├── proxy.ts                  guarda de /admin/* (no Next 16 era middleware.ts)
+├── app/                      rotas do App Router
+├── components/
+│   ├── layout/               cabeçalho, rodapé, navegação, skip link
+│   └── ui/                   primitivos (form-field, button, data-table, dialog…)
+├── features/
+│   ├── auth/                 formulário de login e guarda de sessão
+│   ├── posts/                cartão, lista, artigo, formulário, tabela admin
+│   ├── categories/           formulário e tabela
+│   └── users/                tabela com gestão de permissão
+├── lib/
+│   ├── api/                  cliente axios, normalização de erro, serviços
+│   ├── auth/                 cookie de sessão, decode do JWT, contexto
+│   ├── env/                  carregamento do .env da raiz
+│   ├── hooks/                debounce, paginação, recurso assíncrono, slug
+│   └── utils/                slugify, excerpt, formatação
+├── styles/                   tema, tokens, registry de SSR, estilo global
+└── types/                    tipos da API e vocabulários (status, permissões)
+```
+
+## Acessibilidade
+
+O checklist completo — com o motivo de cada escolha — está no
+[README do frontend](blog-educacional/frontend/README.md#acessibilidade). Em
+resumo: todo campo passa pelo primitivo `form-field` (label, `aria-describedby`
+condicional, `aria-invalid` só quando há erro); erro nunca é comunicado só por
+cor; formulário inválido mostra resumo em `role="alert"` que recebe foco;
+exclusão usa `<dialog>` nativo com `showModal()`; tabelas viram cartões abaixo
+de 768px com os `role` redeclarados; `prefers-reduced-motion` respeitado.
+
+## Testes do frontend
 
 ```bash
-npm run dev:front      # desenvolvimento em http://localhost:3000
-npm run build:front
-npm run test:front
-npm run lint:front
+npm run test:front   # da raiz
 ```
 
-## Testes
+O Jest vem via `next/jest`, que aplica as mesmas transformações SWC do build —
+inclusive a do styled-components configurada no `next.config.ts`. Um transformer
+genérico geraria nomes de classe diferentes dos de produção.
 
-```bash
-npm test          # roda as duas suítes
-npm run test:back # jest --runInBand no backend
-npm run test:front
-```
+## Frontend em produção
 
-Backend e frontend usam **Jest**. No frontend ele vem via `next/jest`, que
-aplica as mesmas transformações SWC do build — inclusive a do
-styled-components configurada no `next.config.ts`. Um transformer genérico
-geraria nomes de classe diferentes dos de produção.
+A imagem é publicada como `<usuário>/blog-educacional-frontend` pelo mesmo
+workflow do backend, já apontando para a URL do Render. Dá para sobrescrever
+pela variável de repositório `NEXT_PUBLIC_API_URL` no GitHub (em **vars**, não
+em secrets: é URL pública, e um secret mascarado em log tornaria uma
+configuração errada indepurável).
 
-## Dados de demonstração (seed)
-
-Na subida, o `db/init.sql` cria o schema e popula dados de exemplo no Neon.
-Como o script é idempotente (`IF NOT EXISTS` e `ON CONFLICT`), ele pode rodar
-em toda inicialização sem duplicar estrutura/dados sensíveis:
-
-- Usuário: **admin** · senha: **admin123** (permissão `admin`)
-
-Para reaplicar o bootstrap: `docker compose up --build`.
-
-## Estrutura
-
-```
-.
-├── docker-compose.yml      # orquestra neon-init + backend + frontend
-├── db/
-│   └── init.sql            # schema + seed (TypeORM)
-├── backend/                # API Fastify + TypeORM (Dockerfile próprio)
-└── frontend/               # Next.js 16 App Router (Dockerfile multi-stage)
-```
-
-## Observações técnicas
-
-- O backend roda o TypeScript diretamente via `tsx` (sem etapa de build), e por
-  isso seu Dockerfile é single-stage. O frontend **tem** etapa de compilação, e
-  por isso o dele é multi-stage com a saída `standalone` do Next. A assimetria
-  entre os dois Dockerfiles é intencional.
-- A home é pré-renderizada com revalidação de 60s. A busca no servidor tolera a
-  API fora do ar em vez de lançar: sem isso, o `docker build` do frontend
-  quebraria, já que o `next build` pré-renderiza a home e a API não está de pé
-  durante o build. Nesse caso a página mostra um aviso e se recupera sozinha na
-  primeira revalidação.
-- Não há migrations: todo o schema vive em `db/init.sql`, aplicado de forma
-  idempotente pelo container `neon-init` a cada subida. Coluna ou tabela nova
-  precisa entrar lá com `IF NOT EXISTS`, senão o `ON_ERROR_STOP=1` derruba o
-  bootstrap na segunda execução.
-- Variáveis de ambiente: backend e frontend compartilham o `.env` da raiz — o
-  backend precisa de `CORS_ORIGIN` além das credenciais do banco e do
-  `JWT_SECRET`; o frontend precisa de `NEXT_PUBLIC_API_URL` e `API_URL`. O
-  modelo completo está em `.env.example`, e a mecânica em
-  [Configuração](#configuração-env-na-raiz).
-- Uploads vão para o banco, não para o disco: o container do backend não tem
-  volume e a imagem é recriada a cada deploy, então qualquer arquivo salvo no
-  filesystem se perderia.
-- O hash de senha nunca sai do banco: a coluna `password` da entidade `User`
-  tem `select: false`, então nenhuma consulta o traz por engano — nem quando o
-  usuário é carregado como relação (o autor em `GET /post`). O único ponto que
-  pede a coluna explicitamente é o `findByUsername`, usado pelo `signin` para
-  comparar o hash com o bcrypt.
+Depois de publicar, ajuste `CORS_ORIGIN` no serviço do backend no Render para a
+origem do frontend — sem isso o navegador barra todas as chamadas.
