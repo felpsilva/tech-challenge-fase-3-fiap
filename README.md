@@ -9,8 +9,8 @@ um dos lados pode ler a visão geral e pular direto para a parte que interessa:
 
 - **[Parte 1 — Backend](#parte-1--backend)** · API Fastify, banco, autenticação,
   rotas e deploy da API.
-- **[Parte 2 — Frontend](#parte-2--frontend)** · Next.js App Router, páginas,
-  configuração das URLs, decisões de interface e deploy do site.
+- **[Parte 2 — Frontend](#parte-2--frontend)** · arquitetura Next.js, tecnologias,
+  interfaces criadas e integração com a API em local e produção.
 
 A [Visão geral](#visão-geral) abaixo cobre só o que é comum aos dois: containers,
 mecânica do `.env` compartilhado e como subir tudo de uma vez.
@@ -39,7 +39,7 @@ O projeto usa **3 containers**, cada um com uma responsabilidade única:
   configuração obrigatória do backend (`CORS_ORIGIN`) e o frontend precisa de
   duas URLs da API — uma para o navegador, outra para o próprio servidor do
   Next dentro da rede do compose. Veja
-  [As duas URLs da API](#as-duas-urls-da-api).
+  [Duas URLs, dois caminhos](#duas-urls-dois-caminhos).
 
 ```
 ┌────────────┐       ┌────────────┐       ┌────────────┐
@@ -93,7 +93,7 @@ arquivo nenhum, e o painel do Render continua sendo a fonte dos segredos de
 produção.
 
 Quais variáveis cada lado consome está documentado na parte respectiva:
-[backend](#configuração-do-backend) e [frontend](#as-duas-urls-da-api). O modelo
+[backend](#configuração-do-backend) e [frontend](#duas-urls-dois-caminhos). O modelo
 completo está em `.env.example`.
 
 O `.env` é versionado por decisão do projeto (trabalho acadêmico, avaliador
@@ -487,12 +487,211 @@ Render para a origem dele.
 
 # Parte 2 — Frontend
 
-Interface em **Next.js 16 (App Router)** com **React 19**, **styled-components**,
-**Formik + Yup** nos formulários e **axios** nas chamadas à API.
+Interface web do blog: um site público de leitura de posts e um painel
+administrativo para quem publica. Consome a API descrita na
+[Parte 1](#parte-1--backend).
 
-Diretório: `blog-educacional/frontend/` — que tem um
-[README próprio](blog-educacional/frontend/README.md) com o checklist detalhado
-de acessibilidade.
+Diretório: `blog-educacional/frontend/` — esta mesma documentação está
+espelhada no [README do frontend](blog-educacional/frontend/README.md).
+
+## Arquitetura do frontend
+
+**Next.js 16 com App Router**, usando os dois modos de renderização de forma
+deliberada — cada um resolve um problema diferente:
+
+| | Páginas públicas (`/`, `/posts/[id]`) | Painel (`/admin/*`, `/login`) |
+| --- | --- | --- |
+| Renderização | **Server Components** | **Client Components** (`'use client'`) |
+| Quem chama a API | o **servidor** do Next, com `fetch` nativo | o **navegador**, com axios |
+| Autenticação | nenhuma (rotas públicas da API) | token JWT no header `Authorization` |
+| Por quê | conteúdo indexável, HTML pronto, cache de 60s | dados por usuário, formulários e interação |
+
+```
+                    ┌───────────────────────┐
+   página pública    │   servidor do Next    │  fetch  ┌─────────────┐
+ ──────────────────> │   (Server Component)  │ ──────> │             │
+                     └───────────────────────┘         │   Backend   │
+                                                       │   Fastify   │
+   painel / login     ┌──────────────────────┐  axios  │   :3001     │
+ ──────────────────>  │  navegador (React)   │ ──────> │             │
+                      └──────────────────────┘         └─────────────┘
+```
+
+O código é organizado em camadas, da mais concreta para a mais genérica:
+
+```
+src/
+├── app/          rotas do App Router — só montam a página e delegam
+├── features/     regras de tela por domínio (posts, categories, users, auth)
+├── components/   UI reutilizável, sem conhecer domínio
+│   ├── layout/   cabeçalho, rodapé, navegação do painel, skip link
+│   └── ui/       botão, campo de formulário, tabela, diálogo, paginação…
+├── lib/
+│   ├── api/      cliente HTTP, resolução das URLs, serviços por recurso
+│   ├── auth/     cookie de sessão, decode do JWT, contexto de sessão
+│   ├── env/      leitura do .env da raiz do repositório
+│   ├── hooks/    debounce, paginação no cliente, recurso assíncrono, slug
+│   └── utils/    slugify, resumo, formatação de data e bytes
+├── styles/       tema, tokens, breakpoints, registry de SSR
+├── types/        tipos da API e vocabulários (status, permissões)
+└── proxy.ts      guarda de navegação de /admin/* e /login
+```
+
+A regra é sempre a mesma: **um arquivo em `app/` nunca chama a API direto**. Ele
+monta o componente de `features/`, que usa um serviço de `lib/api/`. Isso deixa a
+troca de cliente HTTP ou de rota da API restrita a uma camada.
+
+## Tecnologias e como foram usadas
+
+| Tecnologia | Onde e como é usada |
+| --- | --- |
+| **Next.js 16** (App Router) | Roteamento por arquivos, Server Components nas páginas públicas, `revalidate: 60` na home, `generateMetadata` no post, e `proxy.ts` como guarda de navegação (o antigo `middleware.ts`). |
+| **React 19** | Componentes de tela; estado local com hooks e um `AuthContext` para a sessão. |
+| **TypeScript** | Contratos da API em `types/api.ts`, compartilhados entre serviços, formulários e telas — o payload do backend é tipado num lugar só. |
+| **styled-components 6** | Todo o CSS. Tokens (cor, espaço, raio, tipografia) ficam em `styles/theme.ts` e chegam aos componentes pelo `ThemeProvider`; `styles/media.ts` centraliza os breakpoints. O `styled-components-registry.tsx` injeta o CSS no SSR para não haver flash sem estilo. |
+| **Formik** | Estado, submit e erros dos formulários de login, post e categoria. |
+| **Yup** | Esquemas de validação dos mesmos formulários (`post-form-schema.ts`), rodando no cliente antes de chamar a API. |
+| **axios** | Cliente do navegador (`lib/api/http-client.ts`), com interceptors: um injeta o `Authorization` a partir do cookie, outro normaliza o erro e derruba a sessão em `401`. |
+| **Jest + Testing Library** | Testes de componente (`post-card`, `post-list`, `category-form`) e de unidade (`slugify`, `api-error`, `api-url`). O Jest vem via `next/jest`, que aplica as mesmas transformações SWC do build. |
+| **ESLint** (`eslint-config-next`) | Lint; o `next lint` foi removido no Next 16, então o script chama o `eslint` direto. |
+
+## Interfaces criadas
+
+### Páginas
+
+| Rota | Para que serve | Acesso | Renderização |
+| --- | --- | --- | --- |
+| `/` | Home: lista os posts **publicados** com título, autor e resumo de 2 linhas, com campo de busca e paginação | público | servidor |
+| `/posts/[id]` | Leitura do post completo, com thumbnail e categorias | público | servidor |
+| `/login` | Autentica e grava a sessão; redireciona para a página que o usuário tentou abrir | público | cliente |
+| `/admin/posts` | Lista administrativa de posts (inclusive rascunhos), com editar e excluir | professor, admin | cliente |
+| `/admin/posts/new` · `/admin/posts/[id]/edit` | Criar e editar post: título, slug, conteúdo, status, categorias e upload da thumbnail | professor, admin | cliente |
+| `/admin/categories` | Lista administrativa de categorias, com editar e excluir | professor, admin | cliente |
+| `/admin/categories/new` · `/admin/categories/[id]/edit` | Criar e editar categoria (nome e slug) | professor, admin | cliente |
+| `/admin/users` | Gestão de usuários: trocar permissão e excluir | **admin** | cliente |
+| `/sem-permissao` | Destino de quem está logado mas não tem o papel exigido | — | cliente |
+| `/not-found` | 404 do App Router | — | servidor |
+
+### Componentes de domínio (`features/`)
+
+| Componente | Para que serve |
+| --- | --- |
+| `posts/post-list` · `post-card` | Grade da home; a busca filtra em memória e a paginação é no cliente |
+| `posts/post-article` | Corpo do post na página de leitura |
+| `posts/post-form` · `post-form-schema` · `post-image-field` | Formulário de post, validação Yup e campo de upload da thumbnail com pré-visualização |
+| `posts/post-table` | Tabela administrativa de posts, com ações por linha |
+| `posts/post-thumbnail` | `<img>` da thumbnail servida pela API |
+| `categories/category-form` · `category-table` | Formulário e tabela de categorias |
+| `users/user-table` | Tabela de usuários com troca de permissão |
+| `auth/login-form` | Formulário de login; grava o cookie e redireciona |
+| `auth/require-session` | Envolve as telas do painel e garante que a sessão existe no cliente |
+
+### Primitivos de UI (`components/ui/`)
+
+`button`, `form-field`, `form-error-summary`, `data-table`, `confirm-dialog`,
+`pagination`, `feedback`, `badge`, `page-container`, `inputs`,
+`visually-hidden`. São genéricos de propósito: nenhum conhece post, categoria ou
+usuário. É o que permite que todos os formulários tenham o mesmo comportamento
+de erro e todas as tabelas o mesmo comportamento responsivo.
+
+## Integração com o backend
+
+### Duas URLs, dois caminhos
+
+A aplicação fala com a API por **dois caminhos distintos**, e cada um usa uma
+variável de ambiente própria:
+
+| Variável | Quem usa | Como é lida |
+| --- | --- | --- |
+| `API_URL` | o **servidor** do Next (Server Components, via `serverGet`) | em runtime, a cada requisição |
+| `NEXT_PUBLIC_API_URL` | o **navegador** (axios e o `<img>` da thumbnail) | **embutida no bundle durante o build** |
+
+Quem resolve isso é `lib/api/api-url.ts`: no servidor devolve `API_URL` (com
+`NEXT_PUBLIC_API_URL` como fallback), no navegador devolve sempre
+`NEXT_PUBLIC_API_URL`. O fallback final é `http://localhost:3001`.
+
+**Uma variável só não atende os dois.** Dentro do Docker Compose o servidor do
+Next alcança a API pelo DNS interno (`http://backend:3001`), mas o navegador do
+usuário só alcança a porta publicada no host (`http://localhost:3001`). Apontar
+`NEXT_PUBLIC_API_URL` para `http://backend:3001` gera um site em que o SSR
+funciona e **toda** interação do cliente falha com erro de DNS.
+
+### Ambiente local × produção
+
+| | Local (`npm run dev`) | Local (Docker Compose) | Produção |
+| --- | --- | --- | --- |
+| `API_URL` | `http://localhost:3001` | `http://backend:3001` | `https://blog-educacional-backend-1.onrender.com` |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:3001` | `http://localhost:3001` | `https://blog-educacional-backend-1.onrender.com` |
+| Origem do valor | `.env` da raiz | `args` e `environment` do compose | `.env.production` da raiz, repassado como `build-args` no workflow |
+
+Como `NEXT_PUBLIC_API_URL` entra no bundle em tempo de build, ela é `ARG` no
+Dockerfile e `build-args` no workflow do GitHub — trocar o host da API em
+produção **exige rebuild da imagem**, não basta mudar variável de ambiente.
+
+Do outro lado, o backend precisa liberar a origem do frontend em `CORS_ORIGIN`:
+como o navegador fala direto com a API (não há proxy no meio), sem isso todas as
+chamadas do cliente são barradas.
+
+### Leitura pública (servidor)
+
+`lib/api/server-fetch.ts` usa o `fetch` nativo com o cache do Next
+(`revalidate: 60`, tags) e **nunca lança**: devolve `{ ok: false, message }`.
+O motivo é concreto — o `next build` pré-renderiza a home, e durante o
+`docker build` a API não está no ar; uma exceção ali derrubaria a imagem
+inteira. Na prática a página mostra um aviso e se recupera sozinha na primeira
+revalidação.
+
+### Chamadas autenticadas (navegador)
+
+Os serviços em `lib/api/` (`post-service`, `category-service`, `user-service`,
+`auth-service`) são funções finas sobre o `httpClient` do axios, uma por rota da
+API. O fluxo de sessão:
+
+1. `/login` chama `POST /user/signin` e recebe o token JWT.
+2. `writeAuthToken` grava o cookie `blog_token` com `Max-Age` derivado do `exp`
+   do próprio token — o navegador vira o cronômetro da sessão, já que a API não
+   tem rota de refresh.
+3. Todo request do axios passa por um interceptor que lê esse cookie e monta o
+   header `Authorization: Bearer <token>`.
+4. Resposta `401` limpa o cookie e dispara o handler de sessão expirada.
+
+O cookie é **legível por JavaScript de propósito** (não é `httpOnly`): sem uma
+camada de proxy no servidor, o axios precisa ler o token. Não há risco de CSRF,
+porque o token vai num header montado à mão e o backend nem lê cookie.
+
+A guarda em `proxy.ts` protege `/admin/*` e `/login` lendo as claims do cookie
+**sem verificar assinatura** — o `JWT_SECRET` não pode ir para o bundle. Ela é
+**navegação, não autorização**: quem forjar um cookie vê a casca do painel e
+nenhum dado, porque toda requisição leva o token ao Fastify, que confere a
+assinatura de verdade.
+
+### Thumbnail
+
+`buildThumbnailUrl` monta `GET /post/:id/thumbnail` sempre com a URL **pública**
+da API, porque quem busca a imagem é a tag `<img>` do navegador — mesmo quando a
+página foi renderizada no servidor. A URL leva `?v=<timestamp>`: um novo upload
+troca os bytes na mesma URL e, sem isso, o navegador serviria a imagem antiga do
+cache.
+
+O upload usa `FormData` e o axios monta o `Content-Type` com o boundary do
+multipart — por isso o cliente não fixa esse header.
+
+## Decisões de interface
+
+Quatro escolhas que fogem do padrão e têm motivo:
+
+- **A busca filtra no cliente**, em vez de chamar `GET /post/search`. O `ILIKE`
+  do backend é insensível a caixa mas **não a acento**: procurar "matematica"
+  não acharia "Matemática". Como a API não pagina, a lista já está em memória.
+- **A paginação também é no cliente**, pelo mesmo motivo: nenhuma listagem da
+  API aceita `page`/`limit`.
+- **`<img>` simples, não `next/image`.** O `image_url` do post é texto livre,
+  então o conjunto de hosts para `images.remotePatterns` é desconhecido por
+  definição; e o Next 16 bloqueia otimização de IP local, o que quebraria a
+  thumbnail vinda de `localhost:3001` em desenvolvimento.
+- **Resumo de duas linhas por CSS (`line-clamp`)**, não por corte de string:
+  "duas linhas" depende da largura renderizada e da fonte carregada — cortar por
+  contagem de caracteres daria duas linhas no desktop e quatro no celular.
 
 ## Como rodar o frontend
 
@@ -501,7 +700,7 @@ Com Docker (junto com o resto): veja [Como subir a aplicação](#como-subir-a-ap
 Direto, a partir da raiz do repositório (a API precisa estar no ar):
 
 ```bash
-npm run dev:front      # desenvolvimento em http://localhost:3000
+npm run dev:front      # http://localhost:3000
 npm run build:front
 npm run start:front
 npm run test:front
@@ -511,123 +710,43 @@ npm run lint:front
 Dentro de `blog-educacional/frontend/` os scripts equivalentes são `npm run dev`,
 `npm run build`, `npm start`, `npm test`, `npm run lint` e `npm run type-check`.
 
-## Páginas
-
-| Rota | O que faz | Acesso |
-| --- | --- | --- |
-| `/` | Lista os posts publicados (título, autor, resumo de 2 linhas) com busca | público |
-| `/posts/[id]` | Conteúdo completo do post | público |
-| `/login` | Autenticação | público |
-| `/admin/posts` | Listagem administrativa com editar/excluir | professor, admin |
-| `/admin/posts/new` · `/admin/posts/[id]/edit` | Criação e edição de post | professor, admin |
-| `/admin/categories` | Listagem administrativa de categorias | professor, admin |
-| `/admin/categories/new` · `/admin/categories/[id]/edit` | Criação e edição de categoria | professor, admin |
-| `/admin/users` | Gestão de permissões e exclusão de usuários | **admin** |
-
-## As duas URLs da API
-
-Esta é a configuração que mais dá problema, então vale a explicação:
-
-| Variável | Quem usa | Valor no compose | Valor em produção |
-| --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | o **navegador** (axios e o `<img>` da thumbnail) | `http://localhost:3001` | `https://blog-educacional-backend-1.onrender.com` |
-| `API_URL` | o **servidor** do Next (Server Components) | `http://backend:3001` | `https://blog-educacional-backend-1.onrender.com` |
-
-Uma variável só não atende os dois: dentro do compose o servidor do Next
-alcança a API pelo DNS interno, mas o navegador do usuário só alcança a porta
-publicada no host. Apontar `NEXT_PUBLIC_API_URL` para `http://backend:3001`
-produz um site em que o SSR funciona e **toda** interação do cliente falha com
-erro de DNS.
-
-Detalhe importante do `NEXT_PUBLIC_*`: ele é embutido no bundle em tempo de
-**build**, não lido em runtime. Por isso ele é `ARG` no Dockerfile e
-`build-args` no workflow — trocar o host da API em produção exige rebuild da
-imagem, não só mudar variável de ambiente.
-
-**A imagem do frontend não recebe o `.env` da raiz.** O contexto dela é
-`./frontend`, e a saída `standalone` do Next nem carregaria o `next.config.ts`
-em runtime. Ali a configuração chega pelo `ARG NEXT_PUBLIC_API_URL` (build) e
-pelo `environment` do compose (runtime). Os valores de produção vêm do
-`.env.production` da raiz, repassados pelo workflow como `build-args`.
-
-## Decisões que valem registro
-
-- **Sessão em cookie legível por JavaScript, não `httpOnly`.** Sem uma camada
-  de proxy no servidor, o axios precisa ler o token para montar o header
-  `Authorization`. Um cookie `httpOnly` exigiria um endpoint que devolvesse o
-  token — e aí qualquer script injetado chamaria esse endpoint, deixando a
-  mesma superfície de ataque com mais peça móvel. O cookie ganha do
-  `localStorage` porque a guarda de rota consegue lê-lo no servidor e porque o
-  `Max-Age`, derivado do `exp`, faz o próprio navegador ser o cronômetro da
-  sessão (a API não tem refresh). Não há risco de CSRF: o token vai num header
-  montado à mão, e o backend nem lê cookie.
-- **A guarda de rota é navegação, não autorização.** O `proxy.ts` lê as claims
-  sem verificar assinatura, porque o `JWT_SECRET` não pode ir para o bundle.
-  Alguém pode forjar um cookie e ver a *casca* do painel — e nenhum dado, já
-  que toda requisição leva esse token ao Fastify, que confere a assinatura.
-- **A busca filtra no cliente em vez de chamar `GET /post/search`.** O `ILIKE`
-  do backend é insensível a caixa mas **não a acento**: procurar "matematica"
-  não acharia "Matemática", o que num blog em português é defeito. Como a API
-  não pagina, a lista já está em memória — filtrar é instantâneo, casa termo a
-  termo e dobra os acentos dos dois lados.
-- **Paginação no cliente**, pelo mesmo motivo: nenhuma listagem da API aceita
-  `page`/`limit`.
-- **`<img>` simples nas imagens, não `next/image`.** O `image_url` é texto
-  livre, então o conjunto de hosts para `images.remotePatterns` é desconhecido
-  por definição; e o Next 16 passou a bloquear otimização de IP local, o que
-  quebraria a thumbnail vinda de `localhost:3001` em desenvolvimento.
-- **Resumo de duas linhas por CSS (`line-clamp`), não por corte de string.**
-  "Duas linhas" depende da largura renderizada e da fonte carregada: cortar por
-  contagem de caracteres daria duas linhas no desktop e quatro no celular.
-- **A home é pré-renderizada com revalidação de 60s.** A busca no servidor
-  tolera a API fora do ar em vez de lançar: sem isso, o `docker build` do
-  frontend quebraria, já que o `next build` pré-renderiza a home e a API não
-  está de pé durante o build. Nesse caso a página mostra um aviso e se recupera
-  sozinha na primeira revalidação.
-
-## Mapa do código (frontend)
-
-```
-src/
-├── proxy.ts                  guarda de /admin/* (no Next 16 era middleware.ts)
-├── app/                      rotas do App Router
-├── components/
-│   ├── layout/               cabeçalho, rodapé, navegação, skip link
-│   └── ui/                   primitivos (form-field, button, data-table, dialog…)
-├── features/
-│   ├── auth/                 formulário de login e guarda de sessão
-│   ├── posts/                cartão, lista, artigo, formulário, tabela admin
-│   ├── categories/           formulário e tabela
-│   └── users/                tabela com gestão de permissão
-├── lib/
-│   ├── api/                  cliente axios, normalização de erro, serviços
-│   ├── auth/                 cookie de sessão, decode do JWT, contexto
-│   ├── env/                  carregamento do .env da raiz
-│   ├── hooks/                debounce, paginação, recurso assíncrono, slug
-│   └── utils/                slugify, excerpt, formatação
-├── styles/                   tema, tokens, registry de SSR, estilo global
-└── types/                    tipos da API e vocabulários (status, permissões)
-```
-
-## Acessibilidade
-
-O checklist completo — com o motivo de cada escolha — está no
-[README do frontend](blog-educacional/frontend/README.md#acessibilidade). Em
-resumo: todo campo passa pelo primitivo `form-field` (label, `aria-describedby`
-condicional, `aria-invalid` só quando há erro); erro nunca é comunicado só por
-cor; formulário inválido mostra resumo em `role="alert"` que recebe foco;
-exclusão usa `<dialog>` nativo com `showModal()`; tabelas viram cartões abaixo
-de 768px com os `role` redeclarados; `prefers-reduced-motion` respeitado.
-
 ## Testes do frontend
 
 ```bash
 npm run test:front   # da raiz
 ```
 
-O Jest vem via `next/jest`, que aplica as mesmas transformações SWC do build —
-inclusive a do styled-components configurada no `next.config.ts`. Um transformer
-genérico geraria nomes de classe diferentes dos de produção.
+O Jest é configurado por `next/jest`, que aplica as mesmas transformações SWC do
+build — inclusive a do styled-components declarada em `next.config.ts`. Um
+transformer genérico geraria nomes de classe diferentes dos de produção, e os
+testes deixariam de refletir o que o usuário vê.
+
+## Acessibilidade
+
+O que está implementado, para servir de checklist em mudanças futuras:
+
+- Todo campo passa pelo primitivo `form-field`, que amarra `<label htmlFor>`,
+  `aria-describedby` (condicional — apontar para id inexistente é descartado
+  por parte das tecnologias assistivas) e `aria-invalid` só quando há erro.
+- Erro nunca é comunicado só por cor: há marcador de texto junto.
+- Formulário com erro mostra um resumo em `role="alert"` que recebe foco e
+  linka para os campos inválidos.
+- Resultado de busca, carregamento e confirmações vão para regiões `aria-live`.
+- Exclusão usa `<dialog>` nativo com `showModal()`: prisão de foco, `Esc` e
+  fundo inerte vêm da plataforma. O foco inicial é o **Cancelar**.
+- Ações de linha têm nome acessível único (`Editar post: <título>`), não uma
+  fileira de botões "Editar" indistinguíveis.
+- Tabelas viram cartões abaixo de 768px com os `role` redeclarados — trocar o
+  `display` de `<table>` destrói a semântica implícita em todos os navegadores.
+- Alvos de toque com no mínimo 44px; campos com fonte ≥1rem para o iOS não dar
+  zoom no foco.
+- `prefers-reduced-motion` respeitado globalmente; foco visível preservado.
+- Um `<h1>` por página, `lang="pt-BR"` e skip link para o conteúdo.
+
+Verificação manual sugerida: navegar a aplicação inteira só pelo teclado
+(Tab / Enter / Esc), emular 375px de largura e conferir as tabelas
+administrativas como cartões, e rodar o Lighthouse (aba Acessibilidade) na home
+e na página de post.
 
 ## Frontend em produção
 
