@@ -6,6 +6,7 @@ import { from } from '@/styles/media'
 import { useAuth } from '@/lib/auth/auth-context'
 import { canAccessPanel } from '@/types/permissions'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 
 export function SiteHeader() {
     const { user, isReady, signOut } = useAuth()
@@ -35,6 +36,8 @@ export function SiteHeader() {
                             </Button>
                         </>
                     )}
+
+                    <ThemeToggle />
                 </Nav>
             </Inner>
         </Header>

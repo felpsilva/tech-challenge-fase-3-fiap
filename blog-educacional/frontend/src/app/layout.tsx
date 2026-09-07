@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { StyledComponentsRegistry } from '@/styles/styled-components-registry'
+import { themeInitScript } from '@/styles/theme-mode'
 import { AppThemeProvider } from '@/styles/app-theme-provider'
 import { AuthProvider } from '@/lib/auth/auth-context'
 import { SkipLink } from '@/components/layout/skip-link'
@@ -17,8 +18,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
     return (
-        <html lang="pt-BR">
+        // O script inicial escreve data-theme no <html> antes da hidratacao.
+        <html lang="pt-BR" suppressHydrationWarning>
             <body>
+                <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+
                 <StyledComponentsRegistry>
                     <AppThemeProvider>
                         <AuthProvider>

@@ -50,7 +50,7 @@ src/
 │   ├── env/      leitura do .env da raiz do repositório
 │   ├── hooks/    debounce, paginação no cliente, recurso assíncrono, slug
 │   └── utils/    slugify, resumo, formatação de data e bytes
-├── styles/       tema, tokens, breakpoints, registry de SSR
+├── styles/       tema (claro/escuro), tokens, breakpoints, registry de SSR
 ├── types/        tipos da API e vocabulários (status, permissões)
 └── proxy.ts      guarda de navegação de /admin/* e /login
 ```
@@ -108,8 +108,8 @@ troca de cliente HTTP ou de rota da API restrita a uma camada.
 
 `button`, `form-field`, `form-error-summary`, `data-table`, `confirm-dialog`,
 `pagination`, `feedback`, `badge`, `page-container`, `inputs`,
-`visually-hidden`. São genéricos de propósito: nenhum conhece post, categoria ou
-usuário. É o que permite que todos os formulários tenham o mesmo comportamento
+`visually-hidden`, `theme-toggle`. São genéricos de propósito: nenhum conhece
+post, categoria ou usuário. É o que permite que todos os formulários tenham o mesmo comportamento
 de erro e todas as tabelas o mesmo comportamento responsivo.
 
 ## Integração com o backend
@@ -196,7 +196,7 @@ multipart — por isso o cliente não fixa esse header.
 
 ## Decisões de interface
 
-Quatro escolhas que fogem do padrão e têm motivo:
+Cinco escolhas que fogem do padrão e têm motivo:
 
 - **A busca filtra no cliente**, em vez de chamar `GET /post/search`. O `ILIKE`
   do backend é insensível a caixa mas **não a acento**: procurar "matematica"
@@ -210,6 +210,13 @@ Quatro escolhas que fogem do padrão e têm motivo:
 - **Resumo de duas linhas por CSS (`line-clamp`)**, não por corte de string:
   "duas linhas" depende da largura renderizada e da fonte carregada — cortar por
   contagem de caracteres daria duas linhas no desktop e quatro no celular.
+- **Tema escuro por variáveis CSS, não por troca do objeto de tema.** O tema
+  entregue ao styled-components aponta sempre para `var(--color-*)`; quem troca
+  de paleta é o atributo `data-theme` no `<html>`. Trocar o objeto do
+  `ThemeProvider` re-renderizaria a árvore inteira e, pior, o HTML do servidor
+  sairia sempre claro — quem usa tema escuro veria um lampejo branco até a
+  hidratação. Com variáveis, a troca é uma linha de CSS e nenhum componente
+  precisou mudar.
 
 ## Como rodar
 
@@ -244,6 +251,13 @@ build — inclusive a do styled-components declarada em `next.config.ts`. Um
 transformer genérico geraria nomes de classe diferentes dos de produção, e os
 testes deixariam de refletir o que o usuário vê.
 
+O tema tem testes próprios porque a lógica é fácil de quebrar em silêncio:
+`styles/theme-mode.test.ts` cobre a resolução do modo, a persistência (inclusive
+com armazenamento bloqueado) e o script anti-flash; `styles/theme.test.ts`
+garante que as duas paletas têm os mesmos tokens e que nenhuma cor fixa vazou
+para o objeto do tema; `components/ui/theme-toggle.test.tsx` cobre o botão,
+a preferência do sistema e a escolha salva.
+
 ## Acessibilidade
 
 O que está implementado, para servir de checklist em mudanças futuras:
@@ -264,6 +278,11 @@ O que está implementado, para servir de checklist em mudanças futuras:
 - Alvos de toque com no mínimo 44px; campos com fonte ≥1rem para o iOS não dar
   zoom no foco.
 - `prefers-reduced-motion` respeitado globalmente; foco visível preservado.
+- O tema segue `prefers-color-scheme` por padrão e a escolha explícita no botão
+  do cabeçalho tem precedência. O botão é um toggle com `aria-pressed`; o par
+  sol/lua troca por CSS, então o ícone certo já aparece na primeira pintura.
+  `color-scheme` é declarado nos dois modos, para que barras de rolagem e
+  controles nativos do navegador acompanhem.
 - Um `<h1>` por página, `lang="pt-BR"` e skip link para o conteúdo.
 
 Verificação manual sugerida: navegar a aplicação inteira só pelo teclado

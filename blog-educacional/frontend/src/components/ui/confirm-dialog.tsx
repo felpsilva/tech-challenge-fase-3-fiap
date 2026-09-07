@@ -83,7 +83,7 @@ const Dialog = styled.dialog`
     box-shadow: ${({ theme }) => theme.shadows.lg};
 
     &::backdrop {
-        background: rgba(20, 24, 31, 0.5);
+        background: ${({ theme }) => theme.colors.overlay};
     }
 `
 
