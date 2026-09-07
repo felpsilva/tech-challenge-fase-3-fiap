@@ -60,6 +60,9 @@ const BackLink = styled(Link)`
 
 const Article = styled.article`
     max-width: ${({ theme }) => theme.layout.readableWidth};
+    ${from('md')} {
+        max-width: 100%;
+    }
 `
 
 const Header = styled.header`
