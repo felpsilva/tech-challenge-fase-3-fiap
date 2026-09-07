@@ -9,8 +9,10 @@ interface ServerGetOptions {
     tags?: string[]
 }
 
-// Nunca lanca: o next build pre-renderiza a home e, dentro do docker build, a API
-// nao esta no ar — uma excecao aqui derrubaria a imagem inteira.
+// Nunca lanca: quando a API falha, o visitante ve um aviso em vez de tela de erro
+// e a proxima revalidacao se recupera sozinha. Quem impede o `ok: false` de virar
+// HTML congelado na imagem e o connection() em app/page.tsx, que tira a home do
+// prerender de build.
 export async function serverGet<T>(
     path: string,
     options: ServerGetOptions = {},

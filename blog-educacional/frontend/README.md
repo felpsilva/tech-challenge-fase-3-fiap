@@ -154,10 +154,18 @@ chamadas do cliente são barradas.
 
 `lib/api/server-fetch.ts` usa o `fetch` nativo com o cache do Next
 (`revalidate: 60`, tags) e **nunca lança**: devolve `{ ok: false, message }`.
-O motivo é concreto — o `next build` pré-renderiza a home, e durante o
-`docker build` a API não está no ar; uma exceção ali derrubaria a imagem
-inteira. Na prática a página mostra um aviso e se recupera sozinha na primeira
-revalidação.
+Assim, uma API fora do ar rende um aviso na página em vez de uma tela de erro.
+
+A home (`app/page.tsx`) chama `await connection()` antes desse fetch. Sem isso,
+o Next classifica `/` como estática e a renderiza durante o `next build` — que
+roda dentro do `docker build`, onde a API não existe. O resultado com o aviso
+virava HTML congelado na imagem, e como o ISR serve a página vencida enquanto
+revalida em background, **o primeiro visitante depois de cada deploy recebia o
+aviso**; só o reload seguinte mostrava os posts.
+
+Com `connection()` a rota sai do prerender (aparece como `ƒ` no build, não `○`)
+e nada é congelado. O cache de dados continua valendo: medido em 9 requisições
+seguidas, apenas **1** chegou à API. `app/page.test.tsx` trava essa garantia.
 
 ### Chamadas autenticadas (navegador)
 
