@@ -25,7 +25,7 @@ interface AuthState {
     user: SessionUser | null
     isAuthenticated: boolean
     isReady: boolean
-    signIn: (username: string, password: string) => Promise<void>
+    signIn: (username: string, password: string) => Promise<SessionUser>
     signOut: (reason?: 'manual' | 'expired') => void
 }
 
@@ -97,10 +97,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 throw new Error('O servidor devolveu um token em formato inesperado.')
             }
 
-            setSession({
-                user: { id: claims.id, username: claims.username, permission: claims.permission },
-                isReady: true,
-            })
+            const nextUser: SessionUser = {
+                id: claims.id,
+                username: claims.username,
+                permission: claims.permission,
+            }
+
+            setSession({ user: nextUser, isReady: true })
+
+            return nextUser
         },
         [],
     )

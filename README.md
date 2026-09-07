@@ -230,7 +230,8 @@ não lê o filename da thumbnail).
 ### Perfis de acesso
 
 - **visitante anônimo** (sem token): lê os posts **publicados** e as imagens deles.
-- `aluno`: o mesmo do visitante, com conta.
+- `aluno`: o mesmo do visitante, com conta. No frontend, o login de `aluno`
+  termina em `/` (a listagem de posts publicados), e não no painel.
 - `professor`: pode criar, listar, atualizar e remover categorias e posts.
 - `admin`: acesso administrativo completo, incluindo a gestão de usuários.
 
@@ -552,7 +553,7 @@ troca de cliente HTTP ou de rota da API restrita a uma camada.
 | **Formik** | Estado, submit e erros dos formulários de login, post e categoria. |
 | **Yup** | Esquemas de validação dos mesmos formulários (`post-form-schema.ts`), rodando no cliente antes de chamar a API. |
 | **axios** | Cliente do navegador (`lib/api/http-client.ts`), com interceptors: um injeta o `Authorization` a partir do cookie, outro normaliza o erro e derruba a sessão em `401`. |
-| **Jest + Testing Library** | Testes de componente (`post-card`, `post-list`, `category-form`) e de unidade (`slugify`, `api-error`, `api-url`). O Jest vem via `next/jest`, que aplica as mesmas transformações SWC do build. |
+| **Jest + Testing Library** | Testes de componente (`post-card`, `post-list`, `category-form`) e de unidade (`slugify`, `api-error`, `api-url`, `post-login-redirect`). O Jest vem via `next/jest`, que aplica as mesmas transformações SWC do build. |
 | **ESLint** (`eslint-config-next`) | Lint; o `next lint` foi removido no Next 16, então o script chama o `eslint` direto. |
 
 ## Interfaces criadas
@@ -563,13 +564,13 @@ troca de cliente HTTP ou de rota da API restrita a uma camada.
 | --- | --- | --- | --- |
 | `/` | Home: lista os posts **publicados** com título, autor e resumo de 2 linhas, com campo de busca e paginação | público | servidor |
 | `/posts/[id]` | Leitura do post completo, com thumbnail e categorias | público | servidor |
-| `/login` | Autentica e grava a sessão; redireciona para a página que o usuário tentou abrir | público | cliente |
+| `/login` | Autentica e grava a sessão; redireciona para a página que o usuário tentou abrir — quem não tem acesso ao painel (`aluno`) cai em `/` | público | cliente |
 | `/admin/posts` | Lista administrativa de posts (inclusive rascunhos), com editar e excluir | professor, admin | cliente |
 | `/admin/posts/new` · `/admin/posts/[id]/edit` | Criar e editar post: título, slug, conteúdo, status, categorias e upload da thumbnail | professor, admin | cliente |
 | `/admin/categories` | Lista administrativa de categorias, com editar e excluir | professor, admin | cliente |
 | `/admin/categories/new` · `/admin/categories/[id]/edit` | Criar e editar categoria (nome e slug) | professor, admin | cliente |
 | `/admin/users` | Gestão de usuários: trocar permissão e excluir | **admin** | cliente |
-| `/sem-permissao` | Destino de quem está logado mas não tem o papel exigido | — | cliente |
+| `/sem-permissao` | Destino de quem está logado e tenta abrir uma rota `/admin/*` acima do seu papel (ex.: `professor` em `/admin/users`) | — | cliente |
 | `/not-found` | 404 do App Router | — | servidor |
 
 ### Componentes de domínio (`features/`)
@@ -583,15 +584,15 @@ troca de cliente HTTP ou de rota da API restrita a uma camada.
 | `posts/post-thumbnail` | `<img>` da thumbnail servida pela API |
 | `categories/category-form` · `category-table` | Formulário e tabela de categorias |
 | `users/user-table` | Tabela de usuários com troca de permissão |
-| `auth/login-form` | Formulário de login; grava o cookie e redireciona |
+| `auth/login-form` | Formulário de login; grava o cookie e redireciona pelo destino de `lib/auth/post-login-redirect` |
 | `auth/require-session` | Envolve as telas do painel e garante que a sessão existe no cliente |
 
 ### Primitivos de UI (`components/ui/`)
 
 `button`, `form-field`, `form-error-summary`, `data-table`, `confirm-dialog`,
 `pagination`, `feedback`, `badge`, `page-container`, `inputs`,
-`visually-hidden`. São genéricos de propósito: nenhum conhece post, categoria ou
-usuário. É o que permite que todos os formulários tenham o mesmo comportamento
+`visually-hidden`, `theme-toggle`. São genéricos de propósito: nenhum conhece
+post, categoria ou usuário. É o que permite que todos os formulários tenham o mesmo comportamento
 de erro e todas as tabelas o mesmo comportamento responsivo.
 
 ## Integração com o backend
@@ -664,6 +665,12 @@ A guarda em `proxy.ts` protege `/admin/*` e `/login` lendo as claims do cookie
 **navegação, não autorização**: quem forjar um cookie vê a casca do painel e
 nenhum dado, porque toda requisição leva o token ao Fastify, que confere a
 assinatura de verdade.
+
+O destino pós-login fica num lugar só, `lib/auth/post-login-redirect.ts`, usado
+pelo `login-form` e pela guarda: com acesso ao painel vale o `?next=` (ou
+`/admin/posts`); sem acesso — `aluno` — o destino é `/`, porque mandar essa conta
+para `/admin/*` só produziria `/sem-permissao`. O `?next=` é aceito apenas como
+caminho interno, então `//host` não vira redirecionamento para fora.
 
 ### Thumbnail
 

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { AUTH_COOKIE_NAME } from '@/lib/auth/auth-cookie'
 import { decodeJwtPayload, isExpired } from '@/lib/auth/decode-jwt'
+import { resolvePostLoginRedirect } from '@/lib/auth/post-login-redirect'
 import { canAccessPanel, canManageUsers } from '@/types/permissions'
 
 // Navegacao, nao autorizacao: as claims sao lidas sem verificar assinatura.
@@ -11,9 +12,16 @@ export function proxy(request: NextRequest) {
     const session = claims && !isExpired(claims) ? claims : null
 
     if (pathname === '/login') {
-        return session
-            ? NextResponse.redirect(new URL('/admin/posts', request.url))
-            : NextResponse.next()
+        if (!session) {
+            return NextResponse.next()
+        }
+
+        const destination = resolvePostLoginRedirect(
+            session.permission,
+            request.nextUrl.searchParams.get('next'),
+        )
+
+        return NextResponse.redirect(new URL(destination, request.url))
     }
 
     if (!session) {

@@ -6,6 +6,7 @@ import { Formik, Form } from 'formik'
 import * as yup from 'yup'
 import styled from 'styled-components'
 import { useAuth } from '@/lib/auth/auth-context'
+import { resolvePostLoginRedirect } from '@/lib/auth/post-login-redirect'
 import { isApiError } from '@/lib/api/api-error'
 import { FormField } from '@/components/ui/form-field'
 import { TextInput } from '@/components/ui/inputs'
@@ -52,8 +53,9 @@ export function LoginForm() {
                     setFormError(null)
 
                     try {
-                        await signIn(values.username.trim(), values.password)
-                        router.replace(nextPath ?? '/admin/posts')
+                        const user = await signIn(values.username.trim(), values.password)
+
+                        router.replace(resolvePostLoginRedirect(user.permission, nextPath))
                         router.refresh()
                     } catch (error) {
                         if (isApiError(error) && Object.keys(error.fieldErrors).length > 0) {
