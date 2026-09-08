@@ -1,5 +1,5 @@
-// No servidor a chamada sai de dentro da rede do compose (API_URL); no navegador,
-// sai da porta publicada (NEXT_PUBLIC_API_URL, embutida no bundle durante o build).
+// No servidor a chamada sai de dentro da rede do compose (API_URL);
+// no navegador, sai da porta publicada (NEXT_PUBLIC_API_URL, embutida no bundle durante o build).
 const FALLBACK_URL = 'http://localhost:3001'
 
 function stripTrailingSlash(url: string) {
