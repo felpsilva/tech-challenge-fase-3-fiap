@@ -32,6 +32,7 @@ export const postFormSchema = yup.object({
     categoryIds: yup.array().of(yup.number().required()).default([]),
     thumbnailFile: yup
         .mixed<File>()
+        .nullable()
         .test('size', 'A imagem deve ter no máximo 2 MB.', (file) =>
             !file || file.size <= MAX_IMAGE_BYTES)
         .test('type', 'Formatos aceitos: JPEG, PNG ou WebP.', (file) =>
