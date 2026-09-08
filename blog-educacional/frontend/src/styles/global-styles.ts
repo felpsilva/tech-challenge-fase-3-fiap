@@ -5,12 +5,6 @@ import { reducedMotion } from './media'
 import { darkSkin, lightSkin, skinToCssVars } from './theme'
 import { DARK_MEDIA_QUERY, THEME_ATTRIBUTE } from './theme-mode'
 
-/*
- * A paleta clara e o padrao. A escura entra por dois caminhos:
- * 1. media query, para quem chega sem JavaScript ou antes do script inicial rodar;
- * 2. atributo data-theme no <html>, escrito pelo script inicial e pelo ThemeModeProvider,
- *    que tem a ultima palavra quando a pessoa escolheu um modo explicito.
- */
 export const GlobalStyles = createGlobalStyle`
     :root {
         color-scheme: light;

@@ -60,15 +60,12 @@ describe('HomePage', () => {
         expect(ordemConnection).toBeLessThan(ordemFetch)
     })
 
-    it('mantem o cache de dados de 60s no fetch', async () => {
+    it('busca os posts sem cache', async () => {
         serverGetMock.mockResolvedValue({ ok: true, data: [] })
 
         await renderHome()
 
-        expect(serverGetMock).toHaveBeenCalledWith(
-            '/post',
-            expect.objectContaining({ revalidate: 60, tags: ['posts'] }),
-        )
+        expect(serverGetMock).toHaveBeenCalledWith('/post')
     })
 
     it('lista apenas os posts publicados', async () => {

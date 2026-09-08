@@ -27,7 +27,6 @@ httpClient.interceptors.request.use((config) => {
     return config
 })
 
-// Sem Content-Type fixo: o axios precisa montar o boundary do multipart.
 httpClient.interceptors.response.use(
     (response) => response,
     (error) => {

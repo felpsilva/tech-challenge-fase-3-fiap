@@ -4,28 +4,16 @@ export type ServerResult<T> =
     | { ok: true; data: T }
     | { ok: false; status: number; message: string }
 
-interface ServerGetOptions {
-    revalidate?: number | false
-    tags?: string[]
-}
-
-// Nunca lanca: quando a API falha, o visitante ve um aviso em vez de tela de erro
-// e a proxima revalidacao se recupera sozinha. Quem impede o `ok: false` de virar
-// HTML congelado na imagem e o connection() em app/page.tsx, que tira a home do
-// prerender de build.
+// Nunca lanca: quando a API falha, o visitante ve um aviso em vez de tela de erro.
+// O `cache: 'no-store'` garante que uma nova requisicao veja as alteracoes mais
+// recentes da API.
 export async function serverGet<T>(
     path: string,
-    options: ServerGetOptions = {},
 ): Promise<ServerResult<T>> {
-    const { revalidate = 60, tags } = options
-
     try {
         const response = await fetch(`${resolveApiBaseUrl()}${path}`, {
+            cache: 'no-store',
             headers: { Accept: 'application/json' },
-            next: {
-                ...(revalidate === false ? {} : { revalidate }),
-                ...(tags ? { tags } : {}),
-            },
         })
 
         if (!response.ok) {

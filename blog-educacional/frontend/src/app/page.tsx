@@ -16,10 +16,10 @@ export default async function HomePage() {
     // Tira a home do prerender de build. Sem isto o Next marca `/` como estatica
     // e renderiza esta pagina durante o `docker build`, onde a API nao existe: o
     // aviso de erro virava HTML congelado na imagem e o primeiro visitante de
-    // cada deploy recebia ele. O cache de dados do fetch abaixo continua valendo.
+    // cada deploy recebia ele. A pagina agora busca os dados sem cache.
     await connection()
 
-    const result = await serverGet<Post[]>('/post', { revalidate: 60, tags: ['posts'] })
+    const result = await serverGet<Post[]>('/post')
 
     const posts = result.ok
         ? result.data.filter((post) => isPublished(post.status)).map(toPostCard)

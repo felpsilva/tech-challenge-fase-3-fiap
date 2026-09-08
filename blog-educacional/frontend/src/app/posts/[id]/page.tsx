@@ -17,10 +17,7 @@ async function loadPublishedPost(rawId: string) {
         return null
     }
 
-    const result = await serverGet<Post>(`/post/${id}`, {
-        revalidate: 60,
-        tags: ['posts', `post-${id}`],
-    })
+    const result = await serverGet<Post>(`/post/${id}`)
 
     if (!result.ok || !isPublished(result.data.status)) {
         return null

@@ -63,7 +63,7 @@ troca de cliente HTTP ou de rota da API restrita a uma camada.
 
 | Tecnologia | Onde e como é usada |
 | --- | --- |
-| **Next.js 16** (App Router) | Roteamento por arquivos, Server Components nas páginas públicas, `revalidate: 60` na home, `generateMetadata` no post, e `proxy.ts` como guarda de navegação (o antigo `middleware.ts`). |
+| **Next.js 16** (App Router) | Roteamento por arquivos, Server Components nas páginas públicas, `no-store` nas leituras públicas, `generateMetadata` no post, e `proxy.ts` como guarda de navegação (o antigo `middleware.ts`). |
 | **React 19** | Componentes de tela; estado local com hooks e um `AuthContext` para a sessão. |
 | **TypeScript** | Contratos da API em `types/api.ts`, compartilhados entre serviços, formulários e telas — o payload do backend é tipado num lugar só. |
 | **styled-components 6** | Todo o CSS. Tokens (cor, espaço, raio, tipografia) ficam em `styles/theme.ts` e chegam aos componentes pelo `ThemeProvider`; `styles/media.ts` centraliza os breakpoints. O `styled-components-registry.tsx` injeta o CSS no SSR para não haver flash sem estilo. |
@@ -152,8 +152,9 @@ chamadas do cliente são barradas.
 
 ### Leitura pública (servidor)
 
-`lib/api/server-fetch.ts` usa o `fetch` nativo com o cache do Next
-(`revalidate: 60`, tags) e **nunca lança**: devolve `{ ok: false, message }`.
+`lib/api/server-fetch.ts` usa o `fetch` nativo com `cache: 'no-store'` e
+**nunca lança**: devolve `{ ok: false, message }`. Assim, a home e os detalhes
+buscam os dados atuais da API a cada carregamento.
 Assim, uma API fora do ar rende um aviso na página em vez de uma tela de erro.
 
 A home (`app/page.tsx`) chama `await connection()` antes desse fetch. Sem isso,
@@ -164,8 +165,7 @@ revalida em background, **o primeiro visitante depois de cada deploy recebia o
 aviso**; só o reload seguinte mostrava os posts.
 
 Com `connection()` a rota sai do prerender (aparece como `ƒ` no build, não `○`)
-e nada é congelado. O cache de dados continua valendo: medido em 9 requisições
-seguidas, apenas **1** chegou à API. `app/page.test.tsx` trava essa garantia.
+e nada é congelado. `app/page.test.tsx` trava essa garantia.
 
 ### Chamadas autenticadas (navegador)
 
