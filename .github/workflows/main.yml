@@ -66,12 +66,12 @@ jobs:
 
       - name: Build
         env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://blog-educacional-backend-1.onrender.com' }}
         run: npm run build
 
       - name: Verifica a URL da API embutida no bundle
         env:
-          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL || 'https://blog-educacional-backend-1.onrender.com' }}
         run: |
           if [ -z "$NEXT_PUBLIC_API_URL" ] || ! grep -F -rq "$NEXT_PUBLIC_API_URL" .next/static; then
             echo '::error::A URL da API de producao nao foi embutida no bundle.'
