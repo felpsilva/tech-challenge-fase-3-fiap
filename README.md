@@ -66,14 +66,15 @@ Acesse:
 Para rodar em segundo plano: `docker compose up --build -d`
 Para derrubar: `docker compose down`.
 
-### Configuração (`.env` na raiz)
+### Configuração local e produção
 
-Backend e frontend leem **o mesmo** arquivo, versionado na raiz do repositório:
+Em desenvolvimento, backend e frontend podem ler **o mesmo** arquivo `.env` na
+raiz. Esse arquivo é local e não deve ser commitado:
 
 | Arquivo | Quando é lido | O que contém |
 | --- | --- | --- |
-| `.env` | sempre | configuração de desenvolvimento: banco, JWT, CORS e as URLs da API em `localhost` |
-| `.env.production` | quando `NODE_ENV=production` | só o que muda em produção — hoje a URL da API no Render |
+| `.env` | sempre, se existir | configuração local: banco, JWT, CORS e URLs da API |
+| `.env.production` | quando `NODE_ENV=production`, se existir | valores locais complementares de produção |
 | `.env.example` | nunca (é modelo) | template para quem clona o projeto |
 
 Cada pacote sobe a árvore de diretórios até achar esses arquivos
@@ -96,15 +97,19 @@ Quais variáveis cada lado consome está documentado na parte respectiva:
 [backend](#configuração-do-backend) e [frontend](#duas-urls-dois-caminhos). O modelo
 completo está em `.env.example`.
 
-O `.env` é versionado por decisão do projeto (trabalho acadêmico, avaliador
-precisa subir sem configurar nada). Em um projeto real as credenciais do banco
-e o `JWT_SECRET` não deveriam estar aqui.
+Os arquivos `.env` reais são ignorados pelo Git. No GitHub Actions, o workflow
+usa `vars.NEXT_PUBLIC_API_URL` para compilar o frontend. Configure as variáveis
+e secrets de runtime na plataforma que executa o container, usando os nomes do
+`.env.example` (`DATABASE_URL`, `DB_*`, `JWT_SECRET`, `CORS_ORIGIN` e `API_URL`).
+Somente `NEXT_PUBLIC_API_URL`, que é público e fica embutido no bundle, deve ser
+uma GitHub Actions Variable; credenciais e chaves devem ser GitHub Secrets ou
+secrets da plataforma de deploy.
 
 ### Estrutura do repositório
 
 ```
 .
-├── .env, .env.production, .env.example   # configuração compartilhada
+├── .env.example                          # modelo de configuração compartilhada
 ├── package.json                          # scripts que delegam para os pacotes
 └── blog-educacional/
     ├── docker-compose.yml                # orquestra neon-init + backend + frontend
@@ -176,10 +181,9 @@ faltar alguma obrigatória, o processo **não sobe**:
 | `CORS_ORIGIN` | não | `http://localhost:3000` | origens liberadas, separadas por vírgula |
 
 **A imagem do backend é construída a partir da raiz do repositório**, não de
-`./backend`, justamente para conseguir copiar o `.env` compartilhado para dentro
-dela (`COPY .env* ./` no Dockerfile). É o que permite ao serviço no Render subir
-sem nenhuma variável configurada no painel. Continua sendo fallback: variável
-definida no painel vence o arquivo embutido.
+`./backend`, porque o Dockerfile usa esse contexto para copiar o código do
+backend. Nenhum `.env` é copiado para a imagem: as variáveis obrigatórias devem
+ser configuradas no ambiente de runtime, como o painel do Render.
 
 ## Banco de dados e seed
 

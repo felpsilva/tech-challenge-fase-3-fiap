@@ -64,16 +64,18 @@ jobs:
       - name: Testes
         run: npm test
 
-      # Sem `NEXT_PUBLIC_API_URL` no ambiente de proposito: o build tem de pegar
-      # a URL do `.env.production` da raiz.
       - name: Build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
         run: npm run build
 
       - name: Verifica a URL da API embutida no bundle
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
         run: |
-          if ! grep -rq 'blog-educacional-backend-1.onrender.com' .next/static; then
+          if [ -z "$NEXT_PUBLIC_API_URL" ] || ! grep -F -rq "$NEXT_PUBLIC_API_URL" .next/static; then
             echo '::error::A URL da API de producao nao foi embutida no bundle.'
-            echo 'Confira NEXT_PUBLIC_API_URL em .env.production na raiz.'
+            echo 'Confira a variavel NEXT_PUBLIC_API_URL nas Variables do GitHub.'
             exit 1
           fi
 
@@ -107,7 +109,7 @@ jobs:
       - name: Build e Push da imagem
         uses: docker/build-push-action@v6
         with:
-          # Contexto na raiz: o Dockerfile do backend copia o `.env` que vive aqui.
+          # Segredos sao injetados pelo ambiente de deploy, nunca na imagem.
           context: .
           file: blog-educacional/backend/Dockerfile
           push: true
