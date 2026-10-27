@@ -15,7 +15,7 @@ export function canAccessPanel(permission: string) {
 }
 
 export function canManageUsers(permission: string) {
-    return permission === 'admin'
+    return permission === 'admin' || permission === 'professor'
 }
 
 export function normalizePermission(permission: string): Permission {

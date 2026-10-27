@@ -28,7 +28,7 @@ export function RequireSession({ children, adminOnly = false }: RequireSessionPr
     if (adminOnly && !canManageUsers(user.permission)) {
         return (
             <Feedback $tone="danger" role="alert">
-                Apenas administradores gerenciam usuários.
+                Apenas administradores e professores gerenciam usuários.
             </Feedback>
         )
     }
